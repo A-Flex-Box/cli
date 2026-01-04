@@ -1,0 +1,4 @@
+cli
+*.exe
+archive_*.tar.gz
+.DS_Store
