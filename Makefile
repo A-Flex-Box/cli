@@ -1,63 +1,72 @@
 # ---------------------------------------------------------
-#  配置区域
+#  Config
 # ---------------------------------------------------------
 BINARY_NAME := cli
 BUILD_DIR   := bin
-# 提取 git 信息用于注入变量
+HISTORY_DIR := history/shell
+
+# Git Info
 VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT      := $(shell git rev-parse --short HEAD 2>/dev/null || echo "none")
 DATE        := $(shell date +%Y-%m-%dT%H:%M:%S%z)
 
-# 链接参数: 注入 Version/Commit/Date 到 cmd 包的变量中
 LDFLAGS     := -X '$(shell go list -m)/cmd.version=$(VERSION)' \
                -X '$(shell go list -m)/cmd.commit=$(COMMIT)' \
                -X '$(shell go list -m)/cmd.date=$(DATE)' \
                -s -w
 
-# ---------------------------------------------------------
-#  颜色定义 (使用 printf 兼容格式)
-# ---------------------------------------------------------
-# \033 是八进制的 ESC
-CC_RED    := \033[0;31m
+# Colors (printf compatible)
 CC_GREEN  := \033[0;32m
-CC_YELLOW := \033[0;33m
-CC_BLUE   := \033[0;34m
 CC_CYAN   := \033[1;36m
+CC_RED    := \033[0;31m
+CC_YELLOW := \033[1;33m
 CC_RESET  := \033[0m
 
-# ---------------------------------------------------------
-#  构建任务
-# ---------------------------------------------------------
-.PHONY: all build clean test help
+.PHONY: all build clean test help register run install
 
 all: build
 
-# build: 编译二进制文件到 bin 目录
 build:
 	@mkdir -p $(BUILD_DIR)
-	@printf "$(CC_CYAN)➜  Starting build process...$(CC_RESET)\n"
-	@printf "   $(CC_YELLOW)Version:$(CC_RESET) %s\n" "$(VERSION)"
-	@printf "   $(CC_YELLOW)Commit: $(CC_RESET) %s\n" "$(COMMIT)"
-	@printf "$(CC_BLUE)➜  Compiling Go binary to $(BUILD_DIR)/$(BINARY_NAME)...$(CC_RESET)\n"
+	@printf "$(CC_CYAN)➜  Compiling...$(CC_RESET)\n"
 	@go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) main.go
-	@printf "$(CC_GREEN)✔  Build successful!$(CC_RESET)\n"
-	@printf "   Run: $(CC_CYAN)./$(BUILD_DIR)/$(BINARY_NAME) version$(CC_RESET)\n"
+	@printf "$(CC_GREEN)✔  Build ready: $(BUILD_DIR)/$(BINARY_NAME)$(CC_RESET)\n"
 
-# clean: 清理构建产物
+# install: 安装到 GOPATH/bin 并检查 PATH
+install:
+	@printf "$(CC_CYAN)➜  Installing to \$$(go env GOPATH)/bin ...$(CC_RESET)\n"
+	@go install -ldflags "$(LDFLAGS)"
+	@# 检测安装后的命令是否在 PATH 中可用
+	@if command -v $(BINARY_NAME) >/dev/null 2>&1; then \
+		printf "$(CC_GREEN)✔  Successfully installed!$(CC_RESET)\n"; \
+		printf "   Location: $$(which $(BINARY_NAME))\n"; \
+		printf "   You can now run '$(BINARY_NAME)' directly.\n"; \
+	else \
+		printf "$(CC_RED)✘  Installation successful, but '$(BINARY_NAME)' was NOT found in your PATH.$(CC_RESET)\n"; \
+		printf "$(CC_YELLOW)⚠️  Please add the following to your shell profile (~/.bashrc or ~/.zshrc):$(CC_RESET)\n"; \
+		printf "   export PATH=\$$PATH:$$(go env GOPATH)/bin\n"; \
+	fi
+
+register: build
+	@if [ -z "$(FILE)" ]; then \
+		printf "$(CC_RED)Error: FILE argument is missing. Usage: make register FILE=script.sh$(CC_RESET)\n"; \
+		exit 1; \
+	fi
+	@printf "$(CC_CYAN)➜  Validating Metadata in $(FILE)...$(CC_RESET)\n"
+	@$(BUILD_DIR)/$(BINARY_NAME) validate --answer $(FILE)
+	@printf "$(CC_CYAN)➜  Adding to Project History...$(CC_RESET)\n"
+	@$(BUILD_DIR)/$(BINARY_NAME) history add $(FILE)
+	@printf "$(CC_CYAN)➜  Archiving file...$(CC_RESET)\n"
+	@mkdir -p $(HISTORY_DIR)
+	@TS=$$(date +%Y%m%d_%H%M%S); \
+	mv $(FILE) $(HISTORY_DIR)/$${TS}_$$(basename $(FILE)); \
+	printf "$(CC_GREEN)✔  Registered & Archived to $(HISTORY_DIR)/$${TS}_$$(basename $(FILE))$(CC_RESET)\n"
+
+run: build
+	@$(BUILD_DIR)/$(BINARY_NAME) $(ARGS)
+
 clean:
-	@printf "$(CC_RED)➜  Cleaning up...$(CC_RESET)\n"
 	@rm -rf $(BUILD_DIR)
-	@rm -f archive_*.tar.gz
-	@printf "$(CC_GREEN)✔  Done.$(CC_RESET)\n"
 
-# test: 运行测试
 test:
-	@printf "$(CC_CYAN)➜  Running tests...$(CC_RESET)\n"
 	@go test -v ./...
-
-# help: 显示帮助
-help:
-	@printf "$(CC_CYAN)Available Targets:$(CC_RESET)\n"
-	@printf "  $(CC_GREEN)make build$(CC_RESET)  - Compile binary to bin/\n"
-	@printf "  $(CC_GREEN)make clean$(CC_RESET)  - Remove binaries and archives\n"
-	@printf "  $(CC_GREEN)make test$(CC_RESET)   - Run unit tests\n"
