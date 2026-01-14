@@ -3,3 +3,4 @@ cli
 archive_*.tar.gz
 .DS_Store
 /bin/
+trash.sh
