@@ -188,5 +188,35 @@
     "context": {
       "project_structure": ".\n├── .github/\n│   ├── workflows/\n│   │   ├── ci.yml\n├── .gitignore\n├── Makefile\n├── README.md\n├── cmd/\n│   ├── ai.go\n│   ├── archive.go\n│   ├── doctor.go\n│   ├── history_add.go\n│   ├── prompt.go\n│   ├── root.go\n│   ├── validate.go\n├── go.mod\n├── go.sum\n├── history/\n│   ├── history.json\n│   ├── history.md\n│   ├── shell/ (archived scripts hidden)\n├── internal/\n│   ├── archiver/\n│   │   ├── manager.go\n│   ├── fsutil/\n│   │   ├── tree.go\n│   ├── logger/\n│   │   ├── logger.go\n│   ├── meta/\n│   │   ├── parser.go\n├── main.go\n├── show_all_conda_envs.sh\n├── trash.sh\n"
     }
+  },
+  {
+    "timestamp": "2026-01-05 13:10:00",
+    "original_prompt": "去掉ai的训练闭环代码,而且现在好像prompt输出的history step没有项目结构请你修复",
+    "summary": "移除 AI 训练模板代码并修复 Prompt 中项目结构丢失的问题",
+    "action": "修改 cmd/ai.go 删除 template 子命令；重写 cmd/prompt.go，在构建 Context 时重新加入项目结构 (project_structure) 的读取与展示逻辑。",
+    "expected_outcome": "cli ai template 命令不再存在；cli prompt 输出将包含 ## Current Project Structure 区域。",
+    "context": {
+      "project_structure": ".\n├── .github/\n│   ├── workflows/\n│   │   ├── ci.yml\n├── .gitignore\n├── Makefile\n├── README.md\n├── cmd/\n│   ├── ai.go\n│   ├── archive.go\n│   ├── doctor.go\n│   ├── history_add.go\n│   ├── prompt.go\n│   ├── root.go\n│   ├── validate.go\n├── fix_prompt_and_ai.sh\n├── go.mod\n├── go.sum\n├── history/\n│   ├── history.json\n│   ├── history.md\n│   ├── shell/ (archived scripts hidden)\n├── internal/\n│   ├── archiver/\n│   │   ├── manager.go\n│   ├── fsutil/\n│   │   ├── tree.go\n│   ├── logger/\n│   │   ├── logger.go\n│   ├── meta/\n│   │   ├── parser.go\n├── main.go\n├── trash.sh\n"
+    }
+  },
+  {
+    "timestamp": "2026-01-05 14:45:00",
+    "original_prompt": "我不想要兜底或者你至少给没找到加一个警告日志",
+    "summary": "优化 Prompt 结构展示逻辑，增加兜底警告",
+    "action": "修改 cmd/prompt.go，在无法从历史记录读取项目结构而触发实时生成时，向 Stderr 输出显眼的警告信息，保持 stdout 纯净。",
+    "expected_outcome": "当 history.json 缺失结构数据时，bin/cli prompt 会在终端打印警告，但生成的 Prompt 内容依然完整。",
+    "context": {
+      "project_structure": ".\n├── .github/\n│   ├── workflows/\n│   │   ├── ci.yml\n├── .gitignore\n├── Makefile\n├── README.md\n├── add_structure_warning.sh\n├── cmd/\n│   ├── ai.go\n│   ├── archive.go\n│   ├── doctor.go\n│   ├── history_add.go\n│   ├── prompt.go\n│   ├── root.go\n│   ├── validate.go\n├── debug_prompt_logic.sh\n├── go.mod\n├── go.sum\n├── history/\n│   ├── history.json\n│   ├── history.md\n│   ├── shell/ (archived scripts hidden)\n├── internal/\n│   ├── archiver/\n│   │   ├── manager.go\n│   ├── fsutil/\n│   │   ├── tree.go\n│   ├── logger/\n│   │   ├── logger.go\n│   ├── meta/\n│   │   ├── parser.go\n├── main.go\n├── trash.sh\n"
+    }
+  },
+  {
+    "timestamp": "2026-01-05 15:00:00",
+    "original_prompt": "(Output with %!(EXTRA...) bugs)",
+    "summary": "修复 cmd/prompt.go 中 fmt.Sprintf 占位符错误的 Bug",
+    "action": "重写 cmd/prompt.go。使用分段写入策略：Import 部分允许变量扩展，逻辑部分完全禁用 Shell 扩展，将 %%d 修正为 %d，确保 Go 格式化字符串正确。",
+    "expected_outcome": "bin/cli prompt 输出正常的格式化文本，不再出现 %!(EXTRA...) 错误。",
+    "context": {
+      "project_structure": ".\n├── .github/\n│   ├── workflows/\n│   │   ├── ci.yml\n├── .gitignore\n├── Makefile\n├── README.md\n├── cmd/\n│   ├── ai.go\n│   ├── archive.go\n│   ├── doctor.go\n│   ├── history_add.go\n│   ├── prompt.go\n│   ├── root.go\n│   ├── validate.go\n├── fix_format_bug.sh\n├── go.mod\n├── go.sum\n├── history/\n│   ├── history.json\n│   ├── history.md\n│   ├── shell/ (archived scripts hidden)\n├── internal/\n│   ├── archiver/\n│   │   ├── manager.go\n│   ├── fsutil/\n│   │   ├── tree.go\n│   ├── logger/\n│   │   ├── logger.go\n│   ├── meta/\n│   │   ├── parser.go\n├── main.go\n├── trash.sh\n"
+    }
   }
 ]

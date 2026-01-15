@@ -57,43 +57,25 @@ var setupCmd = &cobra.Command{
 		// Step 3: Virtual Environments (List All)
 		fmt.Println("[3/3] Virtual Environments:")
 		
-		// 尝试检测 Conda
 		if _, err := exec.LookPath("conda"); err == nil {
-			// 如果有 conda，列出所有环境
 			cmd := exec.Command("conda", "env", "list")
 			stdout, _ := cmd.StdoutPipe()
 			cmd.Start()
 
 			scanner := bufio.NewScanner(stdout)
-			foundEnvs := false
 			for scanner.Scan() {
 				line := scanner.Text()
-				// 跳过注释行
-				if strings.HasPrefix(line, "#") {
+				if strings.HasPrefix(line, "#") || strings.TrimSpace(line) == "" {
 					continue
 				}
-				if strings.TrimSpace(line) == "" {
-					continue
-				}
-				
-				foundEnvs = true
-				// 简单的格式化：给 active 环境加绿色箭头，其他的缩进
 				if strings.Contains(line, "*") {
-					// Conda 输出里当前环境带星号
-					// 替换星号为更显眼的标记，或者保持原样但加颜色
-					fmt.Printf("      👉 \033[1;32m%s\033[0m\n", line) // Green Highlight
+					fmt.Printf("      👉 \033[1;32m%s\033[0m\n", line)
 				} else {
 					fmt.Printf("         %s\n", line)
 				}
 			}
 			cmd.Wait()
-
-			if !foundEnvs {
-				fmt.Println("      (Conda installed but no environments found?)")
-			}
-
 		} else {
-			// 如果没有 Conda，回退到原来的逻辑 (只显示当前 Active 的)
 			fmt.Println("      (Conda not found, checking active VENV only)")
 			if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
 				envName := filepath.Base(venv)
@@ -103,7 +85,6 @@ var setupCmd = &cobra.Command{
 			}
 		}
 
-		// 显示当前 Python 解释器路径 (Double Check)
 		checkPath := exec.Command("python3", "-c", "import sys; print(sys.executable)")
 		if out, err := checkPath.CombinedOutput(); err == nil {
 			realPath := strings.TrimSpace(string(out))
@@ -141,41 +122,9 @@ var initCmd = &cobra.Command{
 	},
 }
 
-// 3. Template: 最小训练闭环
-var templateCmd = &cobra.Command{
-	Use:   "template",
-	Short: "生成最小训练闭环代码 (train.py)",
-	Run: func(cmd *cobra.Command, args []string) {
-		code := `# Minimal PyTorch Training Loop
-import torch
-import torch.nn as nn
-import torch.optim as optim
-
-X = torch.tensor([[1.0], [2.0], [3.0]], device='cpu')
-y = torch.tensor([[2.0], [4.0], [6.0]], device='cpu')
-
-model = nn.Linear(1, 1) 
-criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01)
-
-print("Start Training...")
-for epoch in range(100):
-    preds = model(X)
-    loss = criterion(preds, y)
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-print(f"Result: y = {model.weight.item():.2f}x + {model.bias.item():.2f}")
-`
-		os.WriteFile("train.py", []byte(code), 0644)
-		fmt.Println("✅ train.py created.")
-	},
-}
-
 func init() {
 	rootCmd.AddCommand(aiCmd)
 	aiCmd.AddCommand(setupCmd)
 	aiCmd.AddCommand(initCmd)
-	aiCmd.AddCommand(templateCmd)
+	// templateCmd has been removed
 }

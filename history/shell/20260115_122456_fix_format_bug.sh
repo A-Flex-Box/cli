@@ -1,3 +1,30 @@
+#!/bin/bash
+# METADATA_START
+# timestamp: 2026-01-05 15:00:00
+# original_prompt: (Output with %!(EXTRA...) bugs)
+# summary: 修复 cmd/prompt.go 中 fmt.Sprintf 占位符错误的 Bug
+# action: 重写 cmd/prompt.go。使用分段写入策略：Import 部分允许变量扩展，逻辑部分完全禁用 Shell 扩展，将 %%d 修正为 %d，确保 Go 格式化字符串正确。
+# expected_outcome: bin/cli prompt 输出正常的格式化文本，不再出现 %!(EXTRA...) 错误。
+# METADATA_END
+
+set -e
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+# 自动获取模块名
+if [ ! -f go.mod ]; then
+    echo "❌ go.mod not found!"
+    exit 1
+fi
+MODULE_NAME=$(grep "^module" go.mod | awk '{print $2}')
+
+echo -e "${GREEN}-> 正在修复 cmd/prompt.go (修正 fmt.Sprintf 格式符)...${NC}"
+
+# ==============================================================================
+# 第一部分：写入头部 (使用 EOF，允许 ${MODULE_NAME} 扩展)
+# ==============================================================================
+cat << HEADER_EOF > cmd/prompt.go
 package cmd
 
 import (
@@ -8,8 +35,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/A-Flex-Box/cli/internal/fsutil"
+	"${MODULE_NAME}/internal/fsutil"
 )
+HEADER_EOF
+
+# ==============================================================================
+# 第二部分：写入逻辑 (使用 'BODY_EOF'，彻底禁用 Shell 扩展)
+# 关键修复：这里的 %d, %s 不会被 Shell 修改，也不会被写成 %%d
+# ==============================================================================
+cat << 'BODY_EOF' >> cmd/prompt.go
 
 // 数据结构
 type promptHistoryItem struct {
@@ -193,3 +227,10 @@ func init() {
 	promptCmd.AddCommand(promptCommitCmd)
 	promptCmd.PersistentFlags().StringVarP(&outputFormat, "format", "f", "shell", "Expected output format")
 }
+BODY_EOF
+
+echo -e "${GREEN}-> 重新编译...${NC}"
+make build
+
+echo -e "${GREEN}=== 修复完成 ===${NC}"
+echo -e "现在运行 ${GREEN}bin/cli prompt \"check\"${NC}，格式应该完美了。"
