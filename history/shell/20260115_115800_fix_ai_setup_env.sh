@@ -1,7 +1,23 @@
+#!/bin/bash
+# METADATA_START
+# timestamp: 2026-01-04 22:55:00
+# original_prompt: 这个setup怎么就一个2/3还有就是我希望将目前的虚拟环境可以检测出来还有对应虚拟环境的解释器
+# summary: 修复 AI Setup 步骤计数并增加虚拟环境检测功能
+# action: 重写 cmd/ai.go，完善 setup 子命令。新增步骤 [3/3] 用于检测 CONDA_DEFAULT_ENV/VIRTUAL_ENV 及 python 解释器绝对路径。
+# expected_outcome: cli ai setup 输出完整的 3/3 步骤，并准确显示当前激活的虚拟环境名称和解释器位置。
+# METADATA_END
+
+set -e
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo -e "${GREEN}-> 正在升级 AI Setup 命令 (增加虚拟环境透视)...${NC}"
+
+cat << 'GO_EOF' > cmd/ai.go
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,11 +33,11 @@ var aiCmd = &cobra.Command{
 }
 
 // -----------------------------------------------------------
-// 1. Setup: 环境自检 (支持列表显示)
+// 1. Setup: 环境自检 (升级版)
 // -----------------------------------------------------------
 var setupCmd = &cobra.Command{
 	Use:   "setup",
-	Short: "检查 GPU、CUDA 及虚拟环境列表",
+	Short: "检查 GPU、CUDA 及当前虚拟环境详情",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("🔌 AI Environment Diagnostic")
 		fmt.Println("--------------------------------------------------")
@@ -54,67 +70,42 @@ var setupCmd = &cobra.Command{
 			fmt.Println("❌ Python/PyTorch not working.")
 		}
 
-		// Step 3: Virtual Environments (List All)
-		fmt.Println("[3/3] Virtual Environments:")
+		// Step 3: Virtual Env & Interpreter (新增功能)
+		fmt.Print("[3/3] Virtual Env:   ")
 		
-		// 尝试检测 Conda
-		if _, err := exec.LookPath("conda"); err == nil {
-			// 如果有 conda，列出所有环境
-			cmd := exec.Command("conda", "env", "list")
-			stdout, _ := cmd.StdoutPipe()
-			cmd.Start()
-
-			scanner := bufio.NewScanner(stdout)
-			foundEnvs := false
-			for scanner.Scan() {
-				line := scanner.Text()
-				// 跳过注释行
-				if strings.HasPrefix(line, "#") {
-					continue
-				}
-				if strings.TrimSpace(line) == "" {
-					continue
-				}
-				
-				foundEnvs = true
-				// 简单的格式化：给 active 环境加绿色箭头，其他的缩进
-				if strings.Contains(line, "*") {
-					// Conda 输出里当前环境带星号
-					// 替换星号为更显眼的标记，或者保持原样但加颜色
-					fmt.Printf("      👉 \033[1;32m%s\033[0m\n", line) // Green Highlight
-				} else {
-					fmt.Printf("         %s\n", line)
-				}
-			}
-			cmd.Wait()
-
-			if !foundEnvs {
-				fmt.Println("      (Conda installed but no environments found?)")
-			}
-
+		// 1. 检测环境类型
+		envType := "System"
+		envName := "None"
+		
+		// 检查 Conda
+		if condaEnv := os.Getenv("CONDA_DEFAULT_ENV"); condaEnv != "" {
+			envType = "Conda"
+			envName = condaEnv
+			fmt.Printf("✅ Active (%s: %s)\n", envType, envName)
+		} else if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
+			// 检查标准 venv
+			envType = "Venv"
+			envName = filepath.Base(venv)
+			fmt.Printf("✅ Active (%s: %s)\n", envType, envName)
 		} else {
-			// 如果没有 Conda，回退到原来的逻辑 (只显示当前 Active 的)
-			fmt.Println("      (Conda not found, checking active VENV only)")
-			if venv := os.Getenv("VIRTUAL_ENV"); venv != "" {
-				envName := filepath.Base(venv)
-				fmt.Printf("      👉 Active Venv: \033[1;32m%s\033[0m (%s)\n", envName, venv)
-			} else {
-				fmt.Println("      ⚠️  No Active Virtual Environment")
-			}
+			fmt.Printf("⚠️  No Virtual Environment Detected (Using System Python)\n")
 		}
 
-		// 显示当前 Python 解释器路径 (Double Check)
+		// 2. 获取解释器绝对路径 (Double Check)
+		// 有时候环境变量激活了，但 path 没刷新，这一步能通过 python 自身确认真实路径
 		checkPath := exec.Command("python3", "-c", "import sys; print(sys.executable)")
 		if out, err := checkPath.CombinedOutput(); err == nil {
 			realPath := strings.TrimSpace(string(out))
-			fmt.Printf("\n      Interpreter: %s\n", realPath)
+			fmt.Printf("      Interpreter: %s\n", realPath)
 		}
 
 		fmt.Println("--------------------------------------------------")
 	},
 }
 
-// 2. Init: 标准化目录结构
+// -----------------------------------------------------------
+// 2. Init: 标准化目录结构 (保持不变)
+// -----------------------------------------------------------
 var initCmd = &cobra.Command{
 	Use:   "init [project_name]",
 	Short: "生成 AI 项目标准目录结构",
@@ -122,15 +113,16 @@ var initCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		pName := args[0]
 		structure := map[string]string{
-			"data/raw":        "原始不可变数据",
-			"data/processed":  "清洗后的特征数据",
-			"models":          "模型权重 checkpoints",
-			"notebooks":       "Jupyter Notebooks",
-			"src":             "源代码",
+			"data/raw":        "原始不可变数据 (Immutable Source)",
+			"data/processed":  "清洗后的特征数据 (Ready for Training)",
+			"models":          "模型权重 checkpoints (.pt/.pth)",
+			"notebooks":       "Jupyter Notebooks (Exploration)",
+			"src":             "源代码 (Source Code)",
 			"src/utils":       "工具函数",
 			"logs":            "Training Logs",
-			"configs":         "Hyperparameters",
+			"configs":         "Hyperparameters (yaml)",
 		}
+
 		fmt.Printf("🏗  Initializing Project: %s\n", pName)
 		for path, desc := range structure {
 			fullPath := filepath.Join(pName, path)
@@ -141,7 +133,9 @@ var initCmd = &cobra.Command{
 	},
 }
 
-// 3. Template: 最小训练闭环
+// -----------------------------------------------------------
+// 3. Template: 最小训练闭环 (保持不变)
+// -----------------------------------------------------------
 var templateCmd = &cobra.Command{
 	Use:   "template",
 	Short: "生成最小训练闭环代码 (train.py)",
@@ -160,11 +154,11 @@ optimizer = optim.SGD(model.parameters(), lr=0.01)
 
 print("Start Training...")
 for epoch in range(100):
-    preds = model(X)
-    loss = criterion(preds, y)
-    optimizer.zero_grad()
+    preds = model(X)            # 1. Forward
+    loss = criterion(preds, y)  # 2. Loss
+    optimizer.zero_grad()       # 3. Backward
     loss.backward()
-    optimizer.step()
+    optimizer.step()            # 4. Step
 
 print(f"Result: y = {model.weight.item():.2f}x + {model.bias.item():.2f}")
 `
@@ -179,3 +173,10 @@ func init() {
 	aiCmd.AddCommand(initCmd)
 	aiCmd.AddCommand(templateCmd)
 }
+GO_EOF
+
+echo -e "${GREEN}-> 重新编译...${NC}"
+make build
+
+echo -e "${GREEN}=== 升级完成 ===${NC}"
+echo -e "现在请运行: ${GREEN}bin/cli ai setup${NC} 查看完整的 3/3 步骤。"

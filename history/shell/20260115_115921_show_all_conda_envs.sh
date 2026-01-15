@@ -1,3 +1,20 @@
+#!/bin/bash
+# METADATA_START
+# timestamp: 2026-01-04 23:10:00
+# original_prompt: 我现在希望的是虚拟环境会显示目前所有的虚拟环境以及当前选择的虚拟环境
+# summary: 升级 setup 命令，支持列出所有 Conda 虚拟环境并高亮当前环境
+# action: 修改 cmd/ai.go，在 setup 步骤 [3/3] 中，检测 conda 命令，如果存在则输出 conda env list 的结果，否则回退到仅显示当前激活环境。
+# expected_outcome: bin/cli ai setup 将列出所有可用环境，并清晰指出当前处于哪个环境中。
+# METADATA_END
+
+set -e
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo -e "${GREEN}-> 正在升级 AI Setup (集成 Conda 环境列表)...${NC}"
+
+cat << 'GO_EOF' > cmd/ai.go
 package cmd
 
 import (
@@ -179,3 +196,10 @@ func init() {
 	aiCmd.AddCommand(initCmd)
 	aiCmd.AddCommand(templateCmd)
 }
+GO_EOF
+
+echo -e "${GREEN}-> 重新编译...${NC}"
+make build
+
+echo -e "${GREEN}=== 升级完成 ===${NC}"
+echo -e "请运行: ${GREEN}bin/cli ai setup${NC} 查看环境列表。"
