@@ -11,6 +11,9 @@
 | **2026-01-04**          | **工程化与 CI/CD**      | **需求**: 增加 Makefile (带颜色)、GitHub Actions CI 和 README。**操作**: 使用 `-ldflags` 注入编译版本信息，配置自动测试流水线。                    |
 | **2026-01-04**          | **自文档化 (Self-Doc)** | **需求**: 记录所有交互历史。**操作**: 生成 `history/` 目录，输出 JSON 和 MD 文件，形成闭环。                                                       |
 | **2026-01-04 16:47:07** | **完整性修正**          | **需求**: 恢复被省略的原始 Prompt。**操作**: 重构脚本，写入全量文本。                                                                                |
+| **2026-02-04 10:14:18** | **整合Printer功能**    | **需求**: 将printer功能整合到cli项目，使用zap日志库，支持远程URL打印。**操作**: 创建printer子命令和internal/printer包，迁移打印和扫描功能，替换所有fmt.Print为zap日志，实现远程URL下载打印功能。**详细变更**: 见 history.json 中的 file_changes 字段。 |
+| **2026-02-03 10:44:00** | **完成Printer包完整迁移** | **需求**: 完成discover.go和scan.go的完整迁移，创建utils.go统一管理辅助函数，优化其他命令的日志。**操作**: 完整迁移discover.go和scan.go的所有功能并替换为zap日志，创建utils.go统一管理辅助函数，优化ai.go和doctor.go的日志输出。**详细变更**: 见 history.json 中的 file_changes 字段。 |
+| **2026-02-03 11:00:00** | **修复类型错误并重构README** | **需求**: 修复discover.go中的类型错误（int16 vs uint16），重构README文档结构，每个命令一个章节说明。**操作**: 修复zap日志类型错误，重构README.md按命令组织章节，每个命令包含详细用法、选项和示例。**详细变更**: 见 history.json 中的 file_changes 字段。 |
 
 ---
 

@@ -70,3 +70,18 @@ clean:
 
 test:
 	@go test -v ./...
+
+help:
+	@printf "$(CC_CYAN)Available commands:$(CC_RESET)\n"
+	@printf "  $(CC_GREEN)build$(CC_RESET)      - 编译项目\n"
+	@printf "  $(CC_GREEN)install$(CC_RESET)    - 安装到 GOPATH/bin\n"
+	@printf "  $(CC_GREEN)test$(CC_RESET)       - 运行测试\n"
+	@printf "  $(CC_GREEN)clean$(CC_RESET)      - 清理构建文件\n"
+	@printf "  $(CC_GREEN)run$(CC_RESET)        - 运行命令 (使用 ARGS=...)\n"
+	@printf "  $(CC_GREEN)register$(CC_RESET)  - 注册脚本到历史 (使用 FILE=...)\n"
+	@printf "\n"
+	@printf "$(CC_CYAN)Printer子命令示例:$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"printer --setup\"$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"printer --file document.pdf --printer MyPrinter\"$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"printer --url https://example.com/doc.pdf --auto\"$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"printer --scan --scan-source adf\"$(CC_RESET)\n"

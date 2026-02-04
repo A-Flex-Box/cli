@@ -3,6 +3,7 @@ module github.com/A-Flex-Box/cli
 go 1.24.6
 
 require (
+	github.com/phin1x/go-ipp v1.7.0
 	github.com/spf13/cobra v1.10.2
 	go.uber.org/zap v1.27.1
 )
