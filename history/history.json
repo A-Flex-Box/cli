@@ -340,5 +340,33 @@
         "history/history.md - 追加本次变更"
       ]
     }
+  },
+  {
+    "timestamp": "2026-02-10 16:00:00",
+    "original_prompt": "cmd目录下不应该包含具体的业务逻辑,应该将具体的业务逻辑放在app目录下,cmd目录下只应该包含具体的业务逻辑的调用(p0); history中应该加入迭代字段,记录操作的迭代实现溯源(p0)",
+    "summary": "架构重构：cmd 瘦身 + history 迭代字段",
+    "action": "1. 创建 app/ 目录，将 ai/prompt/validate/history 业务逻辑迁移至 app/ai、app/prompt、app/validate、app/history\n2. cmd 仅保留 cobra 命令定义与 app 调用\n3. meta.HistoryItem 新增 iteration 字段（1-based 自增），用于操作迭代溯源\n4. history Add 时自动分配 iteration，加载时对缺失项回填",
+    "expected_outcome": "cmd 仅负责命令行入口，业务逻辑集中在 app；history 支持迭代追踪",
+    "iteration": "v1.0.0",
+    "context": {
+      "project_structure": ".\n├── app/\n│   ├── ai/\n│   │   ├── init.go\n│   │   └── setup.go\n│   ├── history/\n│   │   └── history.go\n│   ├── prompt/\n│   │   └── prompt.go\n│   └── validate/\n│       └── validate.go\n├── cmd/\n│   ├── ai.go (调用 app/ai)\n│   ├── archive.go\n│   ├── doctor.go\n│   ├── history_add.go (调用 app/history)\n│   ├── printer.go\n│   ├── prompt.go (调用 app/prompt)\n│   ├── validate.go (调用 app/validate)\n│   └── root.go\n├── internal/\n│   └── meta/\n│       └── parser.go (新增 iteration 字段)\n└── history/\n    └── history.json\n"
+    },
+    "file_changes": {
+      "created": [
+        "app/ai/setup.go",
+        "app/ai/init.go",
+        "app/prompt/prompt.go",
+        "app/validate/validate.go",
+        "app/history/history.go"
+      ],
+      "modified": [
+        "cmd/ai.go - 仅调用 app/ai",
+        "cmd/prompt.go - 仅调用 app/prompt",
+        "cmd/validate.go - 仅调用 app/validate",
+        "cmd/history_add.go - 仅调用 app/history",
+        "internal/meta/parser.go - 新增 Iteration 字段及解析",
+        "history/history.json - 追加本次变更"
+      ]
+    }
   }
 ]

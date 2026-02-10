@@ -51,12 +51,11 @@ make
 ```
 
 > **脚本执行流程：**
+>
 > 1. 检查 `plugins/analysis-ik` 是否存在。
 > 2. 不存在则自动从 Github 下载对应版本的 IK 插件 zip 包。
 > 3. 解压插件到 `plugins/` 目录。
 > 4. 启动 Docker Compose 服务。
-> 
-> 
 
 ### 2. 访问服务
 
@@ -157,11 +156,11 @@ curl -X GET "localhost:9200/news/_search?pretty" -H 'Content-Type: application/j
 
 ## ⚙️ 运维命令 (Makefile)
 
-| 命令 | 作用 |
-| --- | --- |
-| `make` | **推荐**。下载插件、解压并启动服务。 |
-| `make up` | 仅执行 `docker compose up -d` (假设插件已准备好)。 |
-| `make down` | 停止并移除容器 (数据保留在 Docker Volume 中)。 |
+| 命令           | 作用                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| `make`       | **推荐**。下载插件、解压并启动服务。                                                                |
+| `make up`    | 仅执行 `docker compose up -d` (假设插件已准备好)。                                                      |
+| `make down`  | 停止并移除容器 (数据保留在 Docker Volume 中)。                                                            |
 | `make reset` | **危险**。停止容器，**删除插件目录**，**删除所有临时文件**。恢复到刚 Clone 下来的状态。 |
 
 ---
@@ -171,3 +170,16 @@ curl -X GET "localhost:9200/news/_search?pretty" -H 'Content-Type: application/j
 * **Elasticsearch**: 8.11.1
 * **Kibana**: 8.11.1
 * **IK Analyzer**: 8.11.1
+
+# There are some TODOs for the project, and these shouldn't be edited by agents.
+
+## v1.0.0
+
+- [ ] 根据服务类型真实动态的检测服务运行与安装信息(p2)
+- [ ] 网络连接根据协议实现详细的链路追踪(p1)
+- [ ] 对于scripts中的app应该将其中的makefile提取在外部传入环境变量控制启动哪个app(p2)
+- [ ] cmd目录下不应该包含具体的业务逻辑,应该将具体的业务逻辑放在app目录下,cmd目录下只应该包含具体的业务逻辑的调用(p0)
+- [ ] history中应该加入迭代字段,记录操作的迭代实现溯源(p0)
+- [ ] 文本压缩设计?根据调研判断可行性,以及压缩收益(p3)
+- [ ] cli的具体用途与使用场景确定(p1)
+- [ ] cli的命令行交互设计,类似于doctor其他的标准输出也应该拥有基本的表格或其他可视化样式(p1)

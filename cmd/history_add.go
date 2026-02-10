@@ -1,13 +1,12 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"github.com/A-Flex-Box/cli/internal/meta"
-	"github.com/A-Flex-Box/cli/internal/fsutil"
+	"strings"
 
+	"github.com/A-Flex-Box/cli/app/history"
+	"github.com/A-Flex-Box/cli/pkgs"
 	"github.com/spf13/cobra"
 )
 
@@ -22,62 +21,14 @@ var historyAddCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		filePath := args[0]
-		
-		// 1. 提取元数据
-		lang := "shell"
-		if ext := filepath.Ext(filePath); len(ext) > 1 {
-			lang = ext[1:]
-		}
-		
-		newItem, err := meta.ParseMetadata(filePath, lang)
-		if err != nil {
-			fmt.Printf("❌ Failed to extract metadata: %v\n", err)
-			os.Exit(1)
-		}
-
-		// 2. ★★★ 生成项目结构快照 ★★★
-		treeStr, err := fsutil.GenerateTree(".")
-		if err != nil {
-			fmt.Printf("⚠️  Warning: Failed to generate project structure: %v\n", err)
-		} else {
-			if newItem.Context == nil {
-				newItem.Context = make(map[string]string)
+		if err := history.Add(pkgs.DefaultHistoryPath, filePath); err != nil {
+			fmt.Printf("❌ %v\n", err)
+			if strings.Contains(err.Error(), "parse") {
+				fmt.Println("🛑 Aborting operation to prevent data loss. Please fix history.json manually.")
 			}
-			newItem.Context["project_structure"] = treeStr
-			fmt.Println("📸 Project structure snapshot captured.")
-		}
-
-		// 3. 读取现有 History
-		historyPath := "history/history.json"
-		var items []meta.HistoryItem
-
-		if _, err := os.Stat(historyPath); err == nil {
-			data, err := os.ReadFile(historyPath)
-			if err == nil && len(data) > 0 {
-				// ★★★ 核心修复：检查 Unmarshal 错误 ★★★
-				if err := json.Unmarshal(data, &items); err != nil {
-					fmt.Printf("❌ CRITICAL ERROR: Failed to parse existing history.json: %v\n", err)
-					fmt.Printf("🛑 Aborting operation to prevent data loss. Please fix the JSON file manually.\n")
-					os.Exit(1)
-				}
-			}
-		}
-
-		// 4. 追加
-		items = append(items, *newItem)
-
-		// 5. 回写
-		newData, err := json.MarshalIndent(items, "", "  ")
-		if err != nil {
-			fmt.Printf("❌ Error marshaling JSON: %v\n", err)
 			os.Exit(1)
 		}
-
-		if err := os.WriteFile(historyPath, newData, 0644); err != nil {
-			fmt.Printf("❌ Error writing history file: %v\n", err)
-			os.Exit(1)
-		}
-
+		fmt.Println("📸 Project structure snapshot captured.")
 		fmt.Printf("✅ History updated from '%s'.\n", filePath)
 	},
 }

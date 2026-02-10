@@ -3,9 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"github.com/A-Flex-Box/cli/internal/meta"
 
+	"github.com/A-Flex-Box/cli/app/validate"
 	"github.com/spf13/cobra"
 )
 
@@ -21,46 +20,34 @@ var validateCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		filePath := args[0]
-		
-		// 1. 基础文件存在性校验
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			fmt.Printf("❌ Error: File '%s' does not exist.\n", filePath)
+		res := validate.ValidateFile(filePath, isAnswer, lang)
+
+		if !res.Exists {
+			fmt.Printf("❌ Error: %v\n", res.Err)
 			os.Exit(1)
 		}
 
 		fmt.Printf("🔍 Validating '%s'...\n", filePath)
 
-		// 2. 如果是 Answer 模式，校验元数据
-		if isAnswer {
-			// 自动推断语言 (如果未指定)
-			if lang == "" {
-				ext := filepath.Ext(filePath)
-				if len(ext) > 1 {
-					lang = ext[1:] // remove dot
-				} else {
-					lang = "shell" // default
-				}
-			}
-
-			item, err := meta.ParseMetadata(filePath, lang)
-			if err != nil {
-				fmt.Printf("❌ Metadata Validation Failed:\n   %v\n", err)
-				fmt.Println("   Ensure the file contains a header like:")
-				fmt.Println("   # METADATA_START")
-				fmt.Println("   # timestamp: ...")
-				fmt.Println("   # ...")
-				fmt.Println("   # METADATA_END")
-				os.Exit(1)
-			}
-
-			fmt.Println("✅ Metadata Header is Valid:")
-			fmt.Printf("   - Timestamp: %s\n", item.Timestamp)
-			fmt.Printf("   - Summary:   %s\n", item.Summary)
+		if isAnswer && !res.OK {
+			fmt.Printf("❌ Metadata Validation Failed:\n   %v\n", res.Err)
+			fmt.Println("   Ensure the file contains a header like:")
+			fmt.Println("   # METADATA_START")
+			fmt.Println("   # timestamp: ...")
+			fmt.Println("   # ...")
+			fmt.Println("   # METADATA_END")
+			os.Exit(1)
 		}
 
-		// 3. 这里可以预留接口做具体语言的 Syntax Check
-		// 比如调用 go fmt 或 shfmt (如有)
-		
+		if isAnswer && res.Item != nil {
+			fmt.Println("✅ Metadata Header is Valid:")
+			fmt.Printf("   - Timestamp: %s\n", res.Item.Timestamp)
+			fmt.Printf("   - Summary:   %s\n", res.Item.Summary)
+			if res.Item.Iteration != "" {
+				fmt.Printf("   - Iteration: %s\n", res.Item.Iteration)
+			}
+		}
+
 		fmt.Println("✅ File validation passed.")
 	},
 }
