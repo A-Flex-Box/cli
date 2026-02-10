@@ -9,8 +9,9 @@ import (
 // Receives injected WormholeConfig.
 func NewCmd(cfg *config.WormholeConfig) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "wormhole",
-		Short: "Secure P2P file and text transfer via relay",
+		Use:     "wormhole",
+		Short:   "Secure P2P file and text transfer via relay",
+		Example: "cli wormhole send file ./data.zip",
 	}
 	cmd.AddCommand(newRelayCmd(), newSendCmd(cfg), newReceiveCmd(cfg))
 	return cmd

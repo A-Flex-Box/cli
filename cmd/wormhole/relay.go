@@ -15,8 +15,9 @@ func newRelayCmd() *cobra.Command {
 	var timeout time.Duration
 
 	cmd := &cobra.Command{
-		Use:   "relay",
-		Short: "Run the relay server (dumb TCP signal server)",
+		Use:     "relay",
+		Short:   "Run the relay server (dumb TCP signal server)",
+		Example: "cli wormhole relay -p 9000",
 		Run: func(cmd *cobra.Command, args []string) {
 			addr := fmt.Sprintf(":%d", port)
 			ln, err := net.Listen("tcp", addr)

@@ -368,5 +368,67 @@
         "history/history.json - 追加本次变更"
       ]
     }
+  },
+  {
+    "timestamp": "2026-02-10 18:00:00",
+    "original_prompt": "@cmd_structure_refactor.md 实现。Command Factory 模式：子命令独立包、配置注入、Smart Client Dumb Server。",
+    "summary": "Wormhole 功能与命令工厂架构实现",
+    "action": "1. 创建 internal/config (types, manager) 与 cmd/config\n2. 创建 internal/wormhole (protocol, pool, crypto, server, client, ui) 与 cmd/wormhole\n3. root.go 加载配置并注入到子命令，实现 NewCmd(deps...) 工厂模式",
+    "expected_outcome": "wormhole send/receive/relay 可用，config list/use/add/rm 可管理 relay，无全局 Viper",
+    "iteration": "v1.0.0",
+    "context": {
+      "project_structure": ".\n├── cmd/\n│   ├── config/command.go\n│   ├── wormhole/root.go, relay.go, client.go, receive.go\n│   ├── root.go\n│   └── ...\n├── internal/\n│   ├── config/types.go, manager.go\n│   └── wormhole/protocol.go, pool.go, crypto.go, server.go, client.go, ui.go\n└── history/\n"
+    },
+    "file_changes": {
+      "created": ["internal/config/", "internal/wormhole/", "cmd/config/", "cmd/wormhole/"],
+      "modified": ["cmd/root.go - 配置注入与工厂注册"]
+    }
+  },
+  {
+    "timestamp": "2026-02-10 18:30:00",
+    "original_prompt": "@ai_cmd_refactor.md 实现，把所有命令都实现为 NewCmdXXX 的模式。",
+    "summary": "全量命令工厂化重构",
+    "action": "1. 将 cmd/ai.go、history_add.go、doctor.go、archive.go、printer.go、prompt.go、validate.go 迁移至 cmd/<name>/ 独立包\n2. 每个包导出 NewCmd() 或 NewCmd(deps...)\n3. root.go 仅负责 AddCommand 注册",
+    "expected_outcome": "cmd/ 根目录无业务文件，所有子命令均为包+NewCmd 工厂",
+    "iteration": "v1.0.0",
+    "context": {
+      "project_structure": ".\n├── cmd/\n│   ├── ai/command.go\n│   ├── archive/command.go\n│   ├── config/command.go\n│   ├── doctor/command.go\n│   ├── history/root.go, add.go\n│   ├── printer/command.go\n│   ├── prompt/command.go\n│   ├── validate/command.go\n│   ├── wormhole/root.go, relay.go, client.go, receive.go\n│   └── root.go\n└── ...\n"
+    },
+    "file_changes": {
+      "created": ["cmd/ai/", "cmd/archive/", "cmd/doctor/", "cmd/history/", "cmd/printer/", "cmd/prompt/", "cmd/validate/"],
+      "modified": ["cmd/root.go - 注册所有 NewCmd 工厂"],
+      "completed": ["删除 cmd/*.go 扁平文件"]
+    }
+  },
+  {
+    "timestamp": "2026-02-10 19:00:00",
+    "original_prompt": "@refactor_pkgs.md 实现。app 目录迁移到 cmd 下对应命令；Phase 1 常量类型拆分；Phase 2 工具提取；Phase 3 CLI Example。",
+    "summary": "refactor_pkgs 全阶段：app 迁移、标准化、工具提取、文档补全",
+    "action": "1. 将 app/ai、app/history、app/prompt、app/validate 迁移至 cmd/<name>/ 并删除 app/\n2. internal/wormhole 新增 const.go，internal/doctor 新增 const.go，internal/meta 新增 types.go\n3. 创建 internal/pkg/fileutil (ReadFileTrim, FileExists)，doctor 使用之\n4. 为所有 Cobra 命令添加 Example 字段",
+    "expected_outcome": "app 目录移除；internal 包 const/types 规范；通用工具入 internal/pkg；所有命令有 Example",
+    "iteration": "v1.0.0",
+    "context": {
+      "project_structure": ".\n├── cmd/\n│   ├── ai/command.go, init.go, setup.go\n│   ├── history/root.go, add.go, history.go\n│   ├── prompt/command.go, prompt.go\n│   ├── validate/command.go, validate.go\n│   └── ...\n├── internal/\n│   ├── pkg/fileutil/\n│   ├── wormhole/const.go\n│   ├── doctor/const.go\n│   └── meta/types.go\n└── ...\n"
+    },
+    "file_changes": {
+      "created": ["cmd/ai/init.go", "cmd/ai/setup.go", "cmd/history/history.go", "cmd/prompt/prompt.go", "cmd/validate/validate.go", "internal/pkg/fileutil/", "internal/wormhole/const.go", "internal/doctor/const.go", "internal/meta/types.go"],
+      "modified": ["cmd/ai/", "cmd/history/", "cmd/prompt/", "cmd/validate/ - 移除 app 依赖", "internal/doctor/helpers.go - 使用 fileutil.ReadFileTrim", "所有 cmd 命令 - 添加 Example"],
+      "completed": ["删除 app/ 目录"]
+    }
+  },
+  {
+    "timestamp": "2026-02-10 19:10:00",
+    "original_prompt": "newReceiveCmd redeclared / NewCmd redeclared 修复",
+    "summary": "修复 wormhole 包重复声明",
+    "action": "1. 删除 cmd/wormhole/receive.go 保留 client.go 中的 newReceiveCmd；后发现 receive.go 与 client.go 重复，改为 receive.go 单独定义，移除 client.go 中重复\n2. 删除 cmd/wormhole/command.go，保留 root.go 中的 NewCmd",
+    "expected_outcome": "无重复声明，编译通过",
+    "iteration": "v1.0.0",
+    "context": {
+      "project_structure": ".\n├── cmd/wormhole/\n│   ├── root.go (NewCmd)\n│   ├── relay.go\n│   ├── client.go (newSendCmd)\n│   └── receive.go (newReceiveCmd)\n└── ...\n"
+    },
+    "file_changes": {
+      "modified": ["cmd/wormhole/ - 删除 command.go，保留 root.go"],
+      "completed": ["解决 newReceiveCmd、NewCmd 重复声明"]
+    }
   }
 ]

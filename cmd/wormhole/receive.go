@@ -13,8 +13,9 @@ func newReceiveCmd(cfg *config.WormholeConfig) *cobra.Command {
 	var code, outDir string
 
 	cmd := &cobra.Command{
-		Use:   "receive",
-		Short: "Receive file or text",
+		Use:     "receive",
+		Short:   "Receive file or text",
+		Example: "cli wormhole receive -c abc-123",
 		Run: func(cmd *cobra.Command, args []string) {
 			relayAddr := cfg.GetActiveRelayAddr()
 			if relayAddr == "" {

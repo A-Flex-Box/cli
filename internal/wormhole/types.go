@@ -1,21 +1,6 @@
 package wormhole
 
-import (
-	"crypto/cipher"
-	"errors"
-)
-
-// Magic string sent after handshake to verify the channel is secure.
-const MagicVerify = "WORMHOLE_OK"
-
-// Curve name for PAKE (siec is fast and secure).
-const CurveSIEC = "siec"
-
-var (
-	ErrHandshakeFailed  = errors.New("wormhole: handshake failed")
-	ErrVerifyFailed     = errors.New("wormhole: verification failed (magic mismatch)")
-	ErrInvalidFrameSize = errors.New("wormhole: invalid frame size")
-)
+import "crypto/cipher"
 
 // FrameTransport handles length-prefixed message framing.
 // Implementations can vary (TCP, UDP with reassembly, etc.).

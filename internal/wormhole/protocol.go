@@ -6,16 +6,6 @@ import (
 	"io"
 )
 
-const frameLenBytes = 4
-
-// PayloadType indicates the type of data being transferred.
-type PayloadType uint8
-
-const (
-	TypeFile PayloadType = 1
-	TypeText PayloadType = 2
-)
-
 // MetaHeader is the first encrypted frame after handshake.
 type MetaHeader struct {
 	Type PayloadType `json:"t"`

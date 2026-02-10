@@ -25,14 +25,16 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "cli",
-	Short: "Go CLI Tool",
-	Long:  `A powerful CLI tool created via automated scaffolding.`,
+	Use:     "cli",
+	Short:   "Go CLI Tool",
+	Long:    `A powerful CLI tool created via automated scaffolding.`,
+	Example: "cli version",
 }
 
 var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print build info",
+	Use:     "version",
+	Short:   "Print build info",
+	Example: "cli version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("cli Build Info:\n")
 		fmt.Printf(" Version: %s\n", version)

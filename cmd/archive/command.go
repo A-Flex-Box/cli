@@ -12,8 +12,9 @@ func NewCmd() *cobra.Command {
 	var deleteFiles bool
 
 	cmd := &cobra.Command{
-		Use:   "archive",
-		Short: "Create tar.gz archive",
+		Use:     "archive",
+		Short:   "Create tar.gz archive",
+		Example: "cli archive -d",
 		Run: func(cmd *cobra.Command, args []string) {
 			log := logger.NewLogger()
 			defer log.Sync()

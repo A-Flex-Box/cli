@@ -14,10 +14,11 @@ func newSendCmd(cfg *config.WormholeConfig) *cobra.Command {
 	var code string
 
 	cmd := &cobra.Command{
-		Use:   "send [file|text] [path|content]",
-		Short: "Send file or text",
-		Long:  "wormhole send file <path>  - send a file\nwormhole send text <content> - send text",
-		Args:  cobra.MinimumNArgs(2),
+		Use:     "send [file|text] [path|content]",
+		Short:   "Send file or text",
+		Long:    "wormhole send file <path>  - send a file\nwormhole send text <content> - send text",
+		Example: "cli wormhole send file ./report.pdf\n  cli wormhole send text 'Hello'",
+		Args:    cobra.MinimumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			relayAddr := cfg.GetActiveRelayAddr()
 			if relayAddr == "" {

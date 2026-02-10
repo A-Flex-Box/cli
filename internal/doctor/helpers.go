@@ -2,10 +2,11 @@ package doctor
 
 import (
 	"net"
-	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/A-Flex-Box/cli/internal/pkg/fileutil"
 )
 
 // lookPath returns path and nil if found; empty path and err if not.
@@ -47,7 +48,7 @@ func GetOSDetail() string {
 }
 
 func readLinuxOSRelease() string {
-	data, err := readFileTrim("/etc/os-release")
+	data, err := fileutil.ReadFileTrim("/etc/os-release")
 	if err != nil {
 		return "linux"
 	}
@@ -84,10 +85,3 @@ func runDarwinOSVersion() string {
 	return "macOS " + strings.TrimSpace(string(out))
 }
 
-func readFileTrim(path string) (string, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(b)), nil
-}

@@ -33,8 +33,9 @@ func NewCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "printer",
-		Short: "打印机和扫描仪管理工具",
+		Use:     "printer",
+		Short:   "打印机和扫描仪管理工具",
+		Example: "cli printer -f document.pdf",
 		Long: `打印机和扫描仪管理工具，支持：
 - 自动发现和配置网络打印机
 - 打印PDF文件（支持本地文件和远程URL）

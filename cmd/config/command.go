@@ -19,8 +19,9 @@ var (
 // NewCmd returns the config command with all subcommands. Receives injected config.
 func NewCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "config",
-		Short: "Manage relay configuration",
+		Use:     "config",
+		Short:   "Manage relay configuration",
+		Example: "cli config list",
 	}
 	cmd.AddCommand(newListCmd(cfg), newUseCmd(cfg, mgr), newAddCmd(cfg, mgr), newRmCmd(cfg, mgr))
 	return cmd
@@ -28,8 +29,9 @@ func NewCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 
 func newListCmd(cfg *config.Root) *cobra.Command {
 	return &cobra.Command{
-		Use:   "list",
-		Short: "Show table of relays (highlight active)",
+		Use:     "list",
+		Short:   "Show table of relays (highlight active)",
+		Example: "cli config list",
 		Run: func(cmd *cobra.Command, args []string) {
 			active := cfg.Wormhole.ActiveRelay
 			relays := cfg.Wormhole.Relays
@@ -72,9 +74,10 @@ func newListCmd(cfg *config.Root) *cobra.Command {
 
 func newUseCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 	return &cobra.Command{
-		Use:   "use [name]",
-		Short: "Switch active relay",
-		Args:  cobra.ExactArgs(1),
+		Use:     "use [name]",
+		Short:   "Switch active relay",
+		Example: "cli config use public",
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 			if cfg.Wormhole.Relays[name] == "" {
@@ -113,9 +116,10 @@ func newAddCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 
 func newRmCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 	return &cobra.Command{
-		Use:   "rm [name]",
-		Short: "Remove relay alias",
-		Args:  cobra.ExactArgs(1),
+		Use:     "rm [name]",
+		Short:   "Remove relay alias",
+		Example: "cli config rm myrelay",
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 			if cfg.Wormhole.Relays == nil {
