@@ -4,6 +4,17 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+
+	cmdarchive "github.com/A-Flex-Box/cli/cmd/archive"
+	cmdai "github.com/A-Flex-Box/cli/cmd/ai"
+	cmdconfig "github.com/A-Flex-Box/cli/cmd/config"
+	cmddoctor "github.com/A-Flex-Box/cli/cmd/doctor"
+	cmdhistory "github.com/A-Flex-Box/cli/cmd/history"
+	cmdprinter "github.com/A-Flex-Box/cli/cmd/printer"
+	cmdprompt "github.com/A-Flex-Box/cli/cmd/prompt"
+	cmdvalidate "github.com/A-Flex-Box/cli/cmd/validate"
+	cmdwormhole "github.com/A-Flex-Box/cli/cmd/wormhole"
+	"github.com/A-Flex-Box/cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -32,9 +43,35 @@ var versionCmd = &cobra.Command{
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil { os.Exit(1) }
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
+
+	mgr := config.NewManager()
+	cfg, err := mgr.Load()
+	if err != nil {
+		cfg = &config.Root{
+			Wormhole: config.WormholeConfig{
+				ActiveRelay: "public",
+				Relays: map[string]string{
+					"public": "tcp://relay.flex-box.dev:9000",
+					"local":  "tcp://127.0.0.1:9000",
+				},
+			},
+		}
+	}
+
+	rootCmd.AddCommand(cmdai.NewCmd())
+	rootCmd.AddCommand(cmdarchive.NewCmd())
+	rootCmd.AddCommand(cmdconfig.NewCmd(cfg, mgr))
+	rootCmd.AddCommand(cmddoctor.NewCmd())
+	rootCmd.AddCommand(cmdhistory.NewCmd())
+	rootCmd.AddCommand(cmdprinter.NewCmd())
+	rootCmd.AddCommand(cmdprompt.NewCmd())
+	rootCmd.AddCommand(cmdvalidate.NewCmd())
+	rootCmd.AddCommand(cmdwormhole.NewCmd(&cfg.Wormhole))
 }
