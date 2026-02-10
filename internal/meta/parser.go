@@ -7,6 +7,14 @@ import (
 	"strings"
 )
 
+// FileChanges 记录文件变更详情
+type FileChanges struct {
+	Created   []string `json:"created,omitempty"`
+	Modified  []string `json:"modified,omitempty"`
+	Completed []string `json:"completed,omitempty"`
+	Pending   []string `json:"pending,omitempty"`
+}
+
 // HistoryItem 对应 history.json 的结构
 type HistoryItem struct {
 	Timestamp       string            `json:"timestamp"`
@@ -16,6 +24,8 @@ type HistoryItem struct {
 	ExpectedOutcome string            `json:"expected_outcome"`
 	// 新增 Context 字段，用于存储 project_structure 等额外信息
 	Context         map[string]string `json:"context,omitempty"`
+	// 新增 FileChanges 字段，防止回写时丢失
+	FileChanges     *FileChanges      `json:"file_changes,omitempty"`
 }
 
 // LanguageConfig 定义不同语言的注释风格

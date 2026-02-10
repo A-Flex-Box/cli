@@ -54,7 +54,12 @@ var historyAddCmd = &cobra.Command{
 		if _, err := os.Stat(historyPath); err == nil {
 			data, err := os.ReadFile(historyPath)
 			if err == nil && len(data) > 0 {
-				json.Unmarshal(data, &items)
+				// ★★★ 核心修复：检查 Unmarshal 错误 ★★★
+				if err := json.Unmarshal(data, &items); err != nil {
+					fmt.Printf("❌ CRITICAL ERROR: Failed to parse existing history.json: %v\n", err)
+					fmt.Printf("🛑 Aborting operation to prevent data loss. Please fix the JSON file manually.\n")
+					os.Exit(1)
+				}
 			}
 		}
 
