@@ -172,14 +172,18 @@ curl -X GET "localhost:9200/news/_search?pretty" -H 'Content-Type: application/j
 * **IK Analyzer**: 8.11.1
 
 # There are some TODOs for the project, and these shouldn't be edited by agents.
-
+# every todos that are done should have hash record 
 ## v1.0.0
 
-- [ ] 根据服务类型真实动态的检测服务运行与安装信息(p2)
-- [ ] 网络连接根据协议实现详细的链路追踪(p1)
-- [ ] 对于scripts中的app应该将其中的makefile提取在外部传入环境变量控制启动哪个app(p2)
-- [ ] cmd目录下不应该包含具体的业务逻辑,应该将具体的业务逻辑放在app目录下,cmd目录下只应该包含具体的业务逻辑的调用(p0)
-- [ ] history中应该加入迭代字段,记录操作的迭代实现溯源(p0)
-- [ ] 文本压缩设计?根据调研判断可行性,以及压缩收益(p3)
+- [X] history中应该加入迭代字段,记录操作的迭代实现溯源(p0)
+    - [**hash** 6886874]
+- [X] cmd目录下不应该包含具体的业务逻辑,应该将具体的业务逻辑放在app目录下,cmd目录下只应该包含具体的业务逻辑的调用(p0)
+    - [**hash** 6886874]
+
 - [ ] cli的具体用途与使用场景确定(p1)
+- [ ] 网络连接根据协议实现详细的链路追踪(p1)q
 - [ ] cli的命令行交互设计,类似于doctor其他的标准输出也应该拥有基本的表格或其他可视化样式(p1)
+
+- [ ] 根据服务类型真实动态的检测服务运行与安装信息(p2)
+- [ ] 对于scripts中的app应该将其中的makefile提取在外部传入环境变量控制启动哪个app(p2)
+- [ ] 文本压缩设计?根据调研判断可行性,以及压缩收益(p3)
