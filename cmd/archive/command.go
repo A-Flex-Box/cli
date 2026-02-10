@@ -16,11 +16,13 @@ func NewCmd() *cobra.Command {
 		Short:   "Create tar.gz archive",
 		Example: "cli archive -d",
 		Run: func(cmd *cobra.Command, args []string) {
-			log := logger.NewLogger()
-			defer log.Sync()
-			cfg := archiver.ArchiveConfig{DeleteSource: deleteFiles, Logger: log}
+			defer logger.Sync()
+			logger.Info("archive cmd start", logger.Context("params", map[string]any{
+				"delete_source": deleteFiles,
+			})...)
+			cfg := archiver.ArchiveConfig{DeleteSource: deleteFiles}
 			if err := archiver.NewManager(cfg).Run(); err != nil {
-				log.Fatal("Archive failed", zap.Error(err))
+				logger.Fatal("Archive failed", zap.Error(err))
 			}
 		},
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/A-Flex-Box/cli/internal/logger"
 	"github.com/A-Flex-Box/cli/pkgs"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,9 @@ func newAddCmd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filePath := args[0]
+			logger.Info("history add cmd start", logger.Context("params", map[string]any{
+				"file_path": filePath, "history_path": pkgs.DefaultHistoryPath,
+			})...)
 			if err := Add(pkgs.DefaultHistoryPath, filePath); err != nil {
 				fmt.Printf("❌ %v\n", err)
 				if strings.Contains(err.Error(), "parse") {

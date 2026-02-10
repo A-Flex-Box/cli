@@ -21,6 +21,8 @@ import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/A-Flex-Box/cli/internal/logger"
 )
 
 // SecureConn wraps a net.Conn with transparent encryption/decryption.
@@ -34,6 +36,10 @@ type SecureConn struct {
 // Upgrade runs the handshake, verification, and returns a secured connection.
 // handshaker and streamCipher can be nil to use defaults.
 func Upgrade(conn net.Conn, password string, isSender bool, handshaker Handshaker, streamCipher StreamCipher) (*SecureConn, error) {
+	logger.Info("wormhole.Upgrade start", logger.Context("params", map[string]any{
+		"local": conn.LocalAddr().String(), "remote": conn.RemoteAddr().String(),
+		"is_sender": isSender, "password_len": len(password),
+	})...)
 	if handshaker == nil {
 		handshaker = DefaultHandshaker
 	}
@@ -46,6 +52,7 @@ func Upgrade(conn net.Conn, password string, isSender bool, handshaker Handshake
 	if err != nil {
 		return nil, err
 	}
+	logger.Debug("PAKE handshake completed")
 
 	encStream, decStream, err := streamCipher.NewDuplex(key)
 	if err != nil {
@@ -71,11 +78,15 @@ func Upgrade(conn net.Conn, password string, isSender bool, handshaker Handshake
 		}
 	}
 
+	logger.Debug("verification passed, secure tunnel ready")
 	// Phase 3: Transparent tunnel (no more framing; raw encrypted stream)
 	// encStream: our writes; decStream: our reads
 	rd := &cipher.StreamReader{S: decStream, R: conn}
 	wr := &cipher.StreamWriter{S: encStream, W: conn}
 
+	logger.Info("wormhole.Upgrade done", logger.Context("result", map[string]any{
+		"local": conn.LocalAddr().String(), "remote": conn.RemoteAddr().String(),
+	})...)
 	return &SecureConn{conn: conn, reader: rd, writer: wr}, nil
 }
 

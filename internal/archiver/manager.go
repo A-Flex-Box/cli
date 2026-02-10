@@ -10,12 +10,12 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/A-Flex-Box/cli/internal/logger"
 	"go.uber.org/zap"
 )
 
 type ArchiveConfig struct {
 	DeleteSource bool
-	Logger       *zap.Logger
 }
 
 type Manager struct {
@@ -33,7 +33,7 @@ func (m *Manager) Run() error {
 	// 正则: 保留 archive_YYYYMMDD_HHMMSS.tar.gz 格式的历史归档
 	validArchiveRegex := regexp.MustCompile(`^archive_\d{8}_\d{6}\.tar\.gz$`)
 
-	m.cfg.Logger.Info("Start Archiving", zap.String("file", archiveName))
+	logger.Info("archive start", zap.String("file", archiveName))
 
 	outFile, err := os.Create(archiveName)
 	if err != nil { return fmt.Errorf("create file err: %w", err) }
@@ -64,7 +64,7 @@ func (m *Manager) Run() error {
 
 		// 保留历史标准归档
 		if validArchiveRegex.MatchString(info.Name()) {
-			m.cfg.Logger.Info("Skipping historical archive", zap.String("file", relPath))
+			logger.Info("archive skipping historical", zap.String("file", relPath))
 			return nil 
 		}
 
@@ -88,10 +88,10 @@ func (m *Manager) Run() error {
 
 	// Ensure flush
 	tw.Close(); gw.Close(); outFile.Close()
-	m.cfg.Logger.Info("Archive created successfully", zap.String("path", archiveName))
+	logger.Info("archive created", zap.String("path", archiveName))
 
 	if m.cfg.DeleteSource {
-		m.cfg.Logger.Info("Deleting source files...")
+		logger.Info("archive deleting source files")
 		for _, f := range filesToDelete {
 			os.Remove(f)
 		}

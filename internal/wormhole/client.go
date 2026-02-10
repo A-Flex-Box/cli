@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/A-Flex-Box/cli/internal/logger"
 	"github.com/charmbracelet/lipgloss"
+	"go.uber.org/zap"
 )
 
 const roomIDLen = 4
@@ -32,24 +34,36 @@ func ParseRelayAddr(addr string) (string, error) {
 
 // DialRelay connects to relay, sends RoomID, and returns the connection (piped to peer after match).
 func DialRelay(relayAddr, code string) (net.Conn, error) {
+	logger.Info("wormhole.DialRelay start", logger.Context("params", map[string]any{
+		"relay_addr": relayAddr, "code": code, "room_id_len": roomIDLen,
+	})...)
 	addr, err := ParseRelayAddr(relayAddr)
 	if err != nil {
+		logger.Warn("wormhole.DialRelay parse failed", zap.Error(err), zap.String("relay_addr", relayAddr))
 		return nil, err
 	}
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
+		logger.Warn("wormhole.DialRelay dial failed", zap.Error(err), zap.String("addr", addr), zap.String("code", code))
 		return nil, err
 	}
 	id := RoomID(code)
 	if _, err := conn.Write(id[:]); err != nil {
 		conn.Close()
+		logger.Warn("wormhole.DialRelay write room_id failed", zap.Error(err))
 		return nil, err
 	}
+	logger.Info("wormhole.DialRelay done", logger.Context("result", map[string]any{
+		"addr": addr, "local": conn.LocalAddr().String(), "remote": conn.RemoteAddr().String(),
+	})...)
 	return conn, nil
 }
 
 // SendFile sends a file through the wormhole.
 func SendFile(relayAddr, code, filePath string, onProgress func(int64, int64)) error {
+	logger.Info("wormhole.SendFile start", logger.Context("params", map[string]any{
+		"relay_addr": relayAddr, "code": code, "file_path": filePath, "has_progress_cb": onProgress != nil,
+	})...)
 	conn, err := DialRelay(relayAddr, code)
 	if err != nil {
 		return err
@@ -58,9 +72,11 @@ func SendFile(relayAddr, code, filePath string, onProgress func(int64, int64)) e
 
 	secure, err := UpgradeConn(conn, code, true)
 	if err != nil {
+		logger.Warn("wormhole.SendFile upgrade failed", zap.Error(err), zap.String("relay_addr", relayAddr), zap.String("code", code))
 		return err
 	}
 	defer secure.Close()
+	logger.Debug("wormhole.SendFile secure connection established")
 
 	info, err := os.Stat(filePath)
 	if err != nil {
@@ -81,6 +97,9 @@ func SendFile(relayAddr, code, filePath string, onProgress func(int64, int64)) e
 	if err := WriteMetaHeader(secure, h); err != nil {
 		return err
 	}
+	logger.Info("wormhole.SendFile meta header sent", logger.Context("meta", map[string]any{
+		"type": int(h.Type), "name": name, "size": info.Size(), "mode": mode,
+	})...)
 
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -109,11 +128,17 @@ func SendFile(relayAddr, code, filePath string, onProgress func(int64, int64)) e
 			return err
 		}
 	}
+	logger.Info("wormhole.SendFile done", logger.Context("result", map[string]any{
+		"file_path": filePath, "bytes_written": written, "total_size": info.Size(),
+	})...)
 	return nil
 }
 
 // SendText sends text through the wormhole.
 func SendText(relayAddr, code, text string) error {
+	logger.Info("wormhole.SendText start", logger.Context("params", map[string]any{
+		"relay_addr": relayAddr, "code": code, "text_len": len(text),
+	})...)
 	conn, err := DialRelay(relayAddr, code)
 	if err != nil {
 		return err
@@ -134,11 +159,19 @@ func SendText(relayAddr, code, text string) error {
 		return err
 	}
 	_, err = secure.Write([]byte(text))
-	return err
+	if err != nil {
+		logger.Warn("wormhole.SendText write failed", zap.Error(err))
+		return err
+	}
+	logger.Info("wormhole.SendText done", logger.Context("result", map[string]any{"code": code, "bytes": len(text)})...)
+	return nil
 }
 
 // Receive receives data from the wormhole (file or text).
 func Receive(relayAddr, code, outDir string, onProgress func(int64, int64)) error {
+	logger.Info("wormhole.Receive start", logger.Context("params", map[string]any{
+		"relay_addr": relayAddr, "code": code, "out_dir": outDir, "has_progress_cb": onProgress != nil,
+	})...)
 	conn, err := DialRelay(relayAddr, code)
 	if err != nil {
 		return err
@@ -150,11 +183,16 @@ func Receive(relayAddr, code, outDir string, onProgress func(int64, int64)) erro
 		return err
 	}
 	defer secure.Close()
+	logger.Debug("wormhole.Receive secure connection established")
 
 	h, err := ReadMetaHeader(secure)
 	if err != nil {
+		logger.Warn("wormhole.Receive read meta failed", zap.Error(err))
 		return err
 	}
+	logger.Info("wormhole.Receive meta header", logger.Context("meta", map[string]any{
+		"type": int(h.Type), "name": h.Name, "size": h.Size, "mode": h.Mode,
+	})...)
 
 	switch h.Type {
 	case TypeFile:
@@ -193,6 +231,9 @@ func Receive(relayAddr, code, outDir string, onProgress func(int64, int64)) erro
 				return err
 			}
 		}
+		logger.Info("wormhole.Receive file done", logger.Context("result", map[string]any{
+			"out_path": outPath, "bytes_read": read, "total_size": h.Size,
+		})...)
 		return nil
 
 	case TypeText:
@@ -205,6 +246,7 @@ func Receive(relayAddr, code, outDir string, onProgress func(int64, int64)) erro
 			BorderForeground(lipgloss.Color("#874BFD")).
 			Padding(1, 2).
 			Width(60)
+		logger.Info("wormhole.Receive text done", logger.Context("result", map[string]any{"bytes": len(data)})...)
 		fmt.Println(box.Render(string(data)))
 		return nil
 

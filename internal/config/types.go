@@ -2,7 +2,8 @@ package config
 
 // Root is the top-level configuration structure.
 type Root struct {
-	Debug    bool           `mapstructure:"debug" yaml:"debug"`
+	Debug    bool           `mapstructure:"debug" yaml:"debug"`       // deprecated, use log_level
+	LogLevel string         `mapstructure:"log_level" yaml:"log_level"` // debug, info, warn, error
 	Wormhole WormholeConfig `mapstructure:"wormhole" yaml:"wormhole"`
 }
 

@@ -42,26 +42,25 @@ func NewCmd() *cobra.Command {
 - 文档扫描（支持平板和ADF扫描）
 - 打印选项控制（份数、单双面、颜色、纸张来源等）`,
 		Run: func(cmd *cobra.Command, args []string) {
-			log := logger.NewLogger()
-			defer log.Sync()
+			defer logger.Sync()
 
 			if printerSetupMode {
-				if err := printerpkg.AutoSetup(log); err != nil {
-					log.Fatal("自动配置失败", zap.Error(err))
+				if err := printerpkg.AutoSetup(logger.Global()); err != nil {
+					logger.Fatal("自动配置失败", zap.Error(err))
 				}
 				return
 			}
 
 			if listScanDevices {
-				devices, err := printerpkg.ListScanDevices(log)
+				devices, err := printerpkg.ListScanDevices(logger.Global())
 				if err != nil {
-					log.Fatal("查找扫描设备失败", zap.Error(err))
+					logger.Fatal("查找扫描设备失败", zap.Error(err))
 				}
 				if len(devices) == 0 {
-					log.Warn("未找到可用扫描设备")
+					logger.Warn("未找到可用扫描设备")
 					return
 				}
-				printerpkg.PrintScanDevices(log, devices)
+				printerpkg.PrintScanDevices(logger.Global(), devices)
 				return
 			}
 
@@ -79,11 +78,11 @@ func NewCmd() *cobra.Command {
 
 				if scanOptions.Source == "adf" && !scanOptions.Batch && scanOptions.Format != "pdf" {
 					scanOptions.Batch = true
-					log.Info("检测到ADF扫描，自动启用批量扫描模式")
+					logger.Info("检测到ADF扫描，自动启用批量扫描模式")
 				}
 
-				if err := printerpkg.ScanDocument(scanDevice, scanOptions, log); err != nil {
-					log.Fatal("扫描失败", zap.Error(err))
+				if err := printerpkg.ScanDocument(scanDevice, scanOptions, logger.Global()); err != nil {
+					logger.Fatal("扫描失败", zap.Error(err))
 				}
 				return
 			}
@@ -98,14 +97,14 @@ func NewCmd() *cobra.Command {
 			if printerName != "" {
 				selectedPrinter = printerName
 			} else if autoSelect {
-				selectedPrinter, err = printerpkg.AutoSelectPrinter(log)
+				selectedPrinter, err = printerpkg.AutoSelectPrinter(logger.Global())
 				if err != nil {
-					log.Fatal("自动选择打印机失败", zap.Error(err))
+					logger.Fatal("自动选择打印机失败", zap.Error(err))
 				}
 			} else {
-				selectedPrinter, err = printerpkg.InteractiveSelectPrinter(log)
+				selectedPrinter, err = printerpkg.InteractiveSelectPrinter(logger.Global())
 				if err != nil {
-					log.Fatal("选择打印机失败", zap.Error(err))
+					logger.Fatal("选择打印机失败", zap.Error(err))
 				}
 			}
 
@@ -117,17 +116,17 @@ func NewCmd() *cobra.Command {
 				UseCUPS:     useCUPS,
 			}
 
-			if err := printerpkg.ValidatePrintOptions(printOptions, log); err != nil {
-				log.Fatal("打印选项验证失败", zap.Error(err))
+			if err := printerpkg.ValidatePrintOptions(printOptions, logger.Global()); err != nil {
+				logger.Fatal("打印选项验证失败", zap.Error(err))
 			}
 
 			if pdfURL != "" {
-				if err := printerpkg.PrintFromURL(pdfURL, selectedPrinter, printOptions, log); err != nil {
-					log.Fatal("远程打印失败", zap.Error(err))
+				if err := printerpkg.PrintFromURL(pdfURL, selectedPrinter, printOptions, logger.Global()); err != nil {
+					logger.Fatal("远程打印失败", zap.Error(err))
 				}
 			} else {
-				if err := printerpkg.PrintFile(pdfFile, selectedPrinter, printOptions, log); err != nil {
-					log.Fatal("打印失败", zap.Error(err))
+				if err := printerpkg.PrintFile(pdfFile, selectedPrinter, printOptions, logger.Global()); err != nil {
+					logger.Fatal("打印失败", zap.Error(err))
 				}
 			}
 		},

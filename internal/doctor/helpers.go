@@ -6,7 +6,9 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/A-Flex-Box/cli/internal/logger"
 	"github.com/A-Flex-Box/cli/internal/pkg/fileutil"
+	"go.uber.org/zap"
 )
 
 // lookPath returns path and nil if found; empty path and err if not.
@@ -29,6 +31,7 @@ func runVersion(path string, versionArgs ...string) string {
 func portListening(addr string) bool {
 	c, err := net.Dial("tcp", addr)
 	if err != nil {
+		logger.Debug("port not listening", zap.String("addr", addr), zap.Error(err))
 		return false
 	}
 	_ = c.Close()

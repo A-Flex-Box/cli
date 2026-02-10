@@ -52,8 +52,6 @@ register: build
 		printf "$(CC_RED)Error: FILE argument is missing. Usage: make register FILE=script.sh$(CC_RESET)\n"; \
 		exit 1; \
 	fi
-	@printf "$(CC_CYAN)➜  Validating Metadata in $(FILE)...$(CC_RESET)\n"
-	@$(BUILD_DIR)/$(BINARY_NAME) validate --answer $(FILE)
 	@printf "$(CC_CYAN)➜  Adding to Project History...$(CC_RESET)\n"
 	@$(BUILD_DIR)/$(BINARY_NAME) history add $(FILE)
 	@printf "$(CC_CYAN)➜  Archiving file...$(CC_RESET)\n"

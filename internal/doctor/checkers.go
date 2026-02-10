@@ -1,5 +1,9 @@
 package doctor
 
+import (
+	"github.com/A-Flex-Box/cli/internal/logger"
+)
+
 // Standard tool checkers (binary in PATH + version).
 
 type toolChecker struct {
@@ -11,14 +15,17 @@ type toolChecker struct {
 func (t toolChecker) Name() string     { return t.name }
 func (t toolChecker) Category() string { return "tool" }
 func (t toolChecker) Check() Result {
+	logger.Debug("doctor.toolChecker run", logger.Context("params", map[string]any{"name": t.name, "bin": t.bin, "version_args": t.versionArgs})...)
 	path, err := lookPath(t.bin)
 	if err != nil {
+		logger.Debug("doctor.toolChecker not found", logger.Context("result", map[string]any{"name": t.name, "status": "not_installed"})...)
 		return Result{Tool: &ToolEntry{Name: t.name, Status: InstallStatusNotInstall}}
 	}
 	ver := ""
 	if len(t.versionArgs) > 0 {
 		ver = runVersion(path, t.versionArgs...)
 	}
+	logger.Debug("doctor.toolChecker found", logger.Context("result", map[string]any{"name": t.name, "path": path, "version": ver})...)
 	return Result{Tool: &ToolEntry{Name: t.name, Path: path, Version: ver, Status: InstallStatusInstalled}}
 }
 
@@ -34,6 +41,7 @@ type serviceChecker struct {
 func (s serviceChecker) Name() string     { return s.name }
 func (s serviceChecker) Category() string { return "service" }
 func (s serviceChecker) Check() Result {
+	logger.Debug("doctor.serviceChecker run", logger.Context("params", map[string]any{"name": s.name, "bin": s.bin, "port": s.port})...)
 	path, err := lookPath(s.bin)
 	status := InstallStatusInstalled
 	ver := ""
@@ -48,11 +56,16 @@ func (s serviceChecker) Check() Result {
 	if s.port != "" {
 		listening = ListeningNo
 		portStatus = PortStatusNotListening
-		if portListening("127.0.0.1:" + s.port) {
+		addr := "127.0.0.1:" + s.port
+		if portListening(addr) {
+			logger.Debug("doctor.serviceChecker port listening", logger.Context("result", map[string]any{"name": s.name, "addr": addr})...)
 			listening = ListeningYes
 			portStatus = PortStatusListening
 		}
 	}
+	logger.Debug("doctor.serviceChecker done", logger.Context("result", map[string]any{
+		"name": s.name, "path": path, "version": ver, "port": s.port, "listening": listening,
+	})...)
 	return Result{
 		Service: &ServiceEntry{
 			Name:       s.name,

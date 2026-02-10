@@ -5,9 +5,11 @@ import (
 	"os"
 
 	"github.com/A-Flex-Box/cli/internal/config"
+	"github.com/A-Flex-Box/cli/internal/logger"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var (
@@ -33,6 +35,9 @@ func newListCmd(cfg *config.Root) *cobra.Command {
 		Short:   "Show table of relays (highlight active)",
 		Example: "cli config list",
 		Run: func(cmd *cobra.Command, args []string) {
+			logger.Info("config.list start", logger.Context("params", map[string]any{
+				"active_relay": cfg.Wormhole.ActiveRelay, "relays_count": len(cfg.Wormhole.Relays),
+			})...)
 			active := cfg.Wormhole.ActiveRelay
 			relays := cfg.Wormhole.Relays
 
@@ -68,6 +73,7 @@ func newListCmd(cfg *config.Root) *cobra.Command {
 
 			fmt.Println(t.Render())
 			fmt.Println(lipgloss.NewStyle().Foreground(muted).Render(" * = active"))
+			logger.Info("config.list done", logger.Context("result", map[string]any{"relays": relays})...)
 		},
 	}
 }
@@ -80,15 +86,18 @@ func newUseCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
+			logger.Info("config.use start", logger.Context("params", map[string]any{"name": name, "relays": cfg.Wormhole.Relays})...)
 			if cfg.Wormhole.Relays[name] == "" {
 				fmt.Printf("Relay '%s' not found\n", name)
 				os.Exit(1)
 			}
 			cfg.Wormhole.ActiveRelay = name
 			if err := mgr.Save(cfg); err != nil {
+				logger.Warn("config.use save failed", zap.Error(err))
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
+			logger.Info("config.use done", logger.Context("result", map[string]any{"active_relay": name})...)
 			fmt.Printf("Active relay set to '%s'\n", name)
 		},
 	}
@@ -101,14 +110,17 @@ func newAddCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			name, addr := args[0], args[1]
+			logger.Info("config.add start", logger.Context("params", map[string]any{"name": name, "addr": addr})...)
 			if cfg.Wormhole.Relays == nil {
 				cfg.Wormhole.Relays = make(map[string]string)
 			}
 			cfg.Wormhole.Relays[name] = addr
 			if err := mgr.Save(cfg); err != nil {
+				logger.Warn("config.add save failed", zap.Error(err))
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
+			logger.Info("config.add done", logger.Context("result", map[string]any{"name": name, "addr": addr})...)
 			fmt.Printf("Added relay '%s' -> %s\n", name, addr)
 		},
 	}
@@ -122,14 +134,17 @@ func newRmCmd(cfg *config.Root, mgr *config.Manager) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
+			logger.Info("config.rm start", logger.Context("params", map[string]any{"name": name, "relays": cfg.Wormhole.Relays})...)
 			if cfg.Wormhole.Relays == nil {
 				cfg.Wormhole.Relays = make(map[string]string)
 			}
 			delete(cfg.Wormhole.Relays, name)
 			if err := mgr.Save(cfg); err != nil {
+				logger.Warn("config.rm save failed", zap.Error(err))
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
 			}
+			logger.Info("config.rm done", logger.Context("result", map[string]any{"name": name})...)
 			fmt.Printf("Removed relay '%s'\n", name)
 		},
 	}

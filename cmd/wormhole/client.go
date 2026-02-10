@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/A-Flex-Box/cli/internal/config"
+	"github.com/A-Flex-Box/cli/internal/logger"
 	wh "github.com/A-Flex-Box/cli/internal/wormhole"
 	"github.com/spf13/cobra"
 )
@@ -21,6 +22,9 @@ func newSendCmd(cfg *config.WormholeConfig) *cobra.Command {
 		Args:    cobra.MinimumNArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			relayAddr := cfg.GetActiveRelayAddr()
+			logger.Info("wormhole.send cmd start", logger.Context("params", map[string]any{
+				"relay_addr": relayAddr, "active_relay": cfg.ActiveRelay, "args": args,
+			})...)
 			if relayAddr == "" {
 				fmt.Println("No active relay. Run: cli config use <name>")
 				os.Exit(1)

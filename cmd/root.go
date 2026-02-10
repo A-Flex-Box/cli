@@ -6,22 +6,21 @@ import (
 	"runtime"
 
 	cmdarchive "github.com/A-Flex-Box/cli/cmd/archive"
-	cmdai "github.com/A-Flex-Box/cli/cmd/ai"
 	cmdconfig "github.com/A-Flex-Box/cli/cmd/config"
 	cmddoctor "github.com/A-Flex-Box/cli/cmd/doctor"
 	cmdhistory "github.com/A-Flex-Box/cli/cmd/history"
 	cmdprinter "github.com/A-Flex-Box/cli/cmd/printer"
-	cmdprompt "github.com/A-Flex-Box/cli/cmd/prompt"
-	cmdvalidate "github.com/A-Flex-Box/cli/cmd/validate"
 	cmdwormhole "github.com/A-Flex-Box/cli/cmd/wormhole"
 	"github.com/A-Flex-Box/cli/internal/config"
+	"github.com/A-Flex-Box/cli/internal/logger"
 	"github.com/spf13/cobra"
 )
 
 var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	version   = "dev"
+	commit    = "none"
+	date      = "unknown"
+	logLevel  string
 )
 
 var rootCmd = &cobra.Command{
@@ -29,6 +28,28 @@ var rootCmd = &cobra.Command{
 	Short:   "Go CLI Tool",
 	Long:    `A powerful CLI tool created via automated scaffolding.`,
 	Example: "cli version",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		mgr := config.NewManager()
+		cfg, _ := mgr.Load()
+		level := logger.ParseLogLevel(logLevel)
+		if level == logger.LevelInfo && cfg != nil {
+			if cfg.LogLevel != "" {
+				level = logger.ParseLogLevel(cfg.LogLevel)
+			} else if cfg.Debug {
+				level = logger.LevelDebug
+			}
+		}
+		cfgLog := logger.LoggerConfig{
+			Level:   level,
+			LogPath: "",
+		}
+		if level == logger.LevelDebug {
+			cfgLog.LogPath = logger.DefaultLogPath()
+			cfgLog.LogRotation = logger.DefaultLogRotation()
+		}
+		logger.SetGlobalLogger(logger.NewLoggerWithConfig(cfgLog))
+		return nil
+	},
 }
 
 var versionCmd = &cobra.Command{
@@ -51,6 +72,7 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "", "Log level: debug, info, warn, error (default from config)")
 	rootCmd.AddCommand(versionCmd)
 
 	mgr := config.NewManager()
@@ -67,13 +89,10 @@ func init() {
 		}
 	}
 
-	rootCmd.AddCommand(cmdai.NewCmd())
 	rootCmd.AddCommand(cmdarchive.NewCmd())
 	rootCmd.AddCommand(cmdconfig.NewCmd(cfg, mgr))
 	rootCmd.AddCommand(cmddoctor.NewCmd())
 	rootCmd.AddCommand(cmdhistory.NewCmd())
 	rootCmd.AddCommand(cmdprinter.NewCmd())
-	rootCmd.AddCommand(cmdprompt.NewCmd())
-	rootCmd.AddCommand(cmdvalidate.NewCmd())
 	rootCmd.AddCommand(cmdwormhole.NewCmd(&cfg.Wormhole))
 }

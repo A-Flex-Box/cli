@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/A-Flex-Box/cli/internal/config"
+	"github.com/A-Flex-Box/cli/internal/logger"
 	wh "github.com/A-Flex-Box/cli/internal/wormhole"
 	"github.com/spf13/cobra"
 )
@@ -18,6 +19,9 @@ func newReceiveCmd(cfg *config.WormholeConfig) *cobra.Command {
 		Example: "cli wormhole receive -c abc-123",
 		Run: func(cmd *cobra.Command, args []string) {
 			relayAddr := cfg.GetActiveRelayAddr()
+			logger.Info("wormhole.receive cmd start", logger.Context("params", map[string]any{
+				"relay_addr": relayAddr, "active_relay": cfg.ActiveRelay, "code": code, "out_dir": outDir,
+			})...)
 			if relayAddr == "" {
 				fmt.Println("No active relay. Run: cli config use <name>")
 				os.Exit(1)

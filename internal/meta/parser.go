@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/A-Flex-Box/cli/internal/logger"
+	"go.uber.org/zap"
 )
 
 var langConfigs = map[string]LanguageConfig{
@@ -18,8 +21,10 @@ var langConfigs = map[string]LanguageConfig{
 
 // ParseMetadata 读取文件并提取 Metadata Block
 func ParseMetadata(filePath string, lang string) (*HistoryItem, error) {
+	logger.Info("meta.ParseMetadata start", logger.Context("params", map[string]any{"file_path": filePath, "lang": lang})...)
 	file, err := os.Open(filePath)
 	if err != nil {
+		logger.Warn("meta.ParseMetadata open failed", zap.Error(err), zap.String("file_path", filePath))
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
@@ -82,8 +87,13 @@ func ParseMetadata(filePath string, lang string) (*HistoryItem, error) {
 	}
 
 	if foundFields < 3 {
+		logger.Warn("meta.ParseMetadata incomplete", zap.Int("found_fields", foundFields), zap.String("file_path", filePath))
 		return nil, fmt.Errorf("metadata incomplete (found %d fields)", foundFields)
 	}
 
+	logger.Info("meta.ParseMetadata done", logger.Context("result", map[string]any{
+		"file_path": filePath, "found_fields": foundFields,
+		"timestamp": item.Timestamp, "action": item.Action, "iteration": item.Iteration,
+	})...)
 	return item, nil
 }
