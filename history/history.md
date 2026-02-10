@@ -14,6 +14,7 @@
 | **2026-02-04 10:14:18** | **整合Printer功能**    | **需求**: 将printer功能整合到cli项目，使用zap日志库，支持远程URL打印。**操作**: 创建printer子命令和internal/printer包，迁移打印和扫描功能，替换所有fmt.Print为zap日志，实现远程URL下载打印功能。**详细变更**: 见 history.json 中的 file_changes 字段。 |
 | **2026-02-03 10:44:00** | **完成Printer包完整迁移** | **需求**: 完成discover.go和scan.go的完整迁移，创建utils.go统一管理辅助函数，优化其他命令的日志。**操作**: 完整迁移discover.go和scan.go的所有功能并替换为zap日志，创建utils.go统一管理辅助函数，优化ai.go和doctor.go的日志输出。**详细变更**: 见 history.json 中的 file_changes 字段。 |
 | **2026-02-03 11:00:00** | **修复类型错误并重构README** | **需求**: 修复discover.go中的类型错误（int16 vs uint16），重构README文档结构，每个命令一个章节说明。**操作**: 修复zap日志类型错误，重构README.md按命令组织章节，每个命令包含详细用法、选项和示例。**详细变更**: 见 history.json 中的 file_changes 字段。 |
+| **2026-02-10** | **Doctor 重构与开发规范** | **需求**: doctor 增加工具/服务探测，接口+注册表+并发，枚举类型化，禁止空字符串，README 追加开发规范。**操作**: 将 doctor 逻辑迁至 internal/doctor，实现 Checker 接口与 Registry 并发执行；新增 go/git/make/gcc/cpp/py/conda 及 docker/containerd/k8s/etcd/mysql/pg/es 检测；枚举 InstallStatus/ListeningState/PortStatusType，PortStatusNone 改为 "none"；README 新增「开发规范」「枚举规范」章节。**详细变更**: 见 history.json 中的 file_changes 字段。 |
 
 ---
 

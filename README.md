@@ -428,6 +428,30 @@ make run ARGS="<command> <args>"
 
 ---
 
+## 开发规范
+
+### 枚举规范
+
+1. **类型化枚举**：所有枚举值应使用类型别名定义，禁止使用裸字符串。
+
+   ```go
+   type EnumName string
+
+   const (
+       EnumValue1 EnumName = "value1"
+       EnumValue2 EnumName = "value2"
+       EnumNone   EnumName = "none"   // 表示空/无/零值语义
+   )
+   ```
+
+2. **禁止空字符串与零值**：枚举不得使用空字符串 `""` 或类似零值。表示「无」「不适用」等语义时，应使用显式值如 `"none"`、`"na"` 等。
+
+3. **命名约定**：常量名采用 `类型名 + 用途` 的 PascalCase，如 `InstallStatusInstalled`、`PortStatusNone`。
+
+4. **注册与使用**：在包内通过 `const` 块统一声明，使用时通过常量引用，避免魔法字符串。
+
+---
+
 ## 📄 License
 
 See LICENSE file for details.

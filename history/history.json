@@ -314,5 +314,31 @@
     "context": {
       "project_structure": ".\n├── .github/\n│   ├── workflows/\n│   │   ├── ci.yml\n├── .gitignore\n├── Makefile\n├── README.md\n├── cmd/\n│   ├── ai.go\n│   ├── archive.go\n│   ├── doctor.go\n│   ├── history_add.go\n│   ├── printer.go\n│   ├── prompt.go\n│   ├── root.go\n│   ├── validate.go\n├── go.mod\n├── go.sum\n├── history/\n│   ├── history.json\n│   ├── history.md\n│   ├── shell/ (archived scripts hidden)\n├── internal/\n│   ├── archiver/\n│   │   ├── manager.go\n│   ├── fsutil/\n│   │   ├── tree.go\n│   ├── logger/\n│   │   ├── logger.go\n│   ├── meta/\n│   │   ├── parser.go\n│   ├── printer/\n│   │   ├── discover.go\n│   │   ├── print.go\n│   │   ├── scan.go\n│   │   ├── setup.go\n│   │   ├── types.go\n│   │   ├── utils.go\n├── main.go\n├── trash.sh\n"
     }
+  },
+  {
+    "timestamp": "2026-02-10 00:00:00",
+    "original_prompt": "doctor命令重构：增加工具探测(make gcc cpp py conda docker containerd k8s etcd mysql pg es)、接口+注册表+并发执行、类型化枚举规范、枚举禁止空字符串使用none、README追加开发规范/枚举规范章节；将本次变更追加到history",
+    "summary": "Doctor 重构：接口架构、扩检工具、枚举规范与开发规范文档",
+    "action": "1. 将 doctor 逻辑迁至 internal/doctor，实现 Checker 接口、Registry 注册表、并发执行\n2. 新增工具检测：go/git/make/gcc/cpp/py/conda；服务检测：docker/containerd/k8s/etcd/mysql/pg/es（含默认端口探测）\n3. 枚举类型化：InstallStatus、ListeningState、PortStatusType，禁止空字符串，PortStatusNone 改为 \"none\"\n4. README 新增「开发规范」章节及「枚举规范」小节\n5. 更新 history.json 与 history.md 记录本次变更",
+    "expected_outcome": "doctor 命令支持更多工具与服务检测，输出美观且全英文；代码结构清晰可扩展；枚举与开发规范文档化",
+    "context": {
+      "project_structure": ".\n├── cmd/\n│   └── doctor.go (精简为调用 internal/doctor)\n├── internal/\n│   └── doctor/\n│       ├── types.go (枚举定义)\n│       ├── registry.go (并发执行)\n│       ├── checkers.go (标准实现)\n│       ├── helpers.go (lookPath/runVersion/portListening)\n│       └── report.go (格式化输出)\n├── README.md (新增开发规范/枚举规范)\n└── history/\n    ├── history.json (追加)\n    └── history.md (追加)\n"
+    },
+    "file_changes": {
+      "created": [
+        "internal/doctor/types.go - 枚举与数据结构",
+        "internal/doctor/registry.go - Checker 注册与并发执行",
+        "internal/doctor/checkers.go - 标准 checker 实现",
+        "internal/doctor/helpers.go - 检测辅助函数",
+        "internal/doctor/report.go - 统一输出"
+      ],
+      "modified": [
+        "cmd/doctor.go - 精简为调用 doctor.Run()",
+        "internal/doctor/types.go - PortStatusNone 由 \"\" 改为 \"none\"",
+        "README.md - 新增开发规范/枚举规范章节",
+        "history/history.json - 追加本次变更",
+        "history/history.md - 追加本次变更"
+      ]
+    }
   }
 ]
