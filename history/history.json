@@ -430,5 +430,84 @@
       "modified": ["cmd/wormhole/ - 删除 command.go，保留 root.go"],
       "completed": ["解决 newReceiveCmd、NewCmd 重复声明"]
     }
+  },
+  {
+    "timestamp": "2026-02-11 15:30:00",
+    "original_prompt": "Error: can't have its own role。relay 配对时两个 sender 或两个 receiver 被配在一起导致 PAKE 失败。收不到消息、没有关键调试信息。relay 连日志都没有。",
+    "summary": "Wormhole relay 配对修复：仅 sender+receiver 配对、协议增加 role 字节",
+    "action": "1. 协议扩展：client 发送 room_id(4B)+role(1B)，role 0=sender/1=receiver\n2. Relay 仅配对 opposite role，同 role 拒绝并打 WARN\n3. client.DialRelay 新增 isSender 参数，SendFile/SendText 传 true、Receive 传 false\n4. Relay Accept 日志改为 INFO 便于无 --debug 时可见",
+    "expected_outcome": "同一 code 下 sender 与 receiver 正确配对，不再出现 can't have its own role；relay 有基础连接日志",
+    "file_changes": {
+      "modified": [
+        "internal/wormhole/client.go - DialRelay 增加 isSender，写入 role 字节",
+        "internal/wormhole/server.go - roomSlot 按 waitingRole 配对，同 role 拒绝",
+        "cmd/wormhole/relay.go - Accept 改为 logger.Info"
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-02-11 15:35:00",
+    "original_prompt": "收不到消息，只会说建立连接。Receive 在 TUI goroutine 内 fmt.Println 文本，被 Bubble Tea alt screen 覆盖。",
+    "summary": "Wormhole 接收文本显示修复：TUI 退出后再打印",
+    "action": "1. Receive 新增 textResult *string 参数，收到文本时写入该指针\n2. receive 命令在 RunTransferUI 返回成功后打印 receivedText\n3. 增加 SendText/Receive 关键 DEBUG 日志",
+    "expected_outcome": "接收端 TUI 退出后正确显示收到的文本",
+    "file_changes": {
+      "modified": [
+        "internal/wormhole/client.go - Receive 签名增加 textResult",
+        "cmd/wormhole/receive.go - 传入 &receivedText，退出后打印"
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-02-11 15:40:00",
+    "original_prompt": "GUI 显示逻辑优化：等待时不知道当前 code；Press any key 假的，长按 Ctrl+C 无效；希望 q 或 Esc 退出。进度条塞不下换行、颜色不一致，需单行渲染。",
+    "summary": "Wormhole GUI 优化：配对码展示、q/Esc 退出、进度条单行",
+    "action": "1. transferModel 增加 code 字段，RunTransferUI 增加 code 参数，View 中显示 Code: xxx\n2. tea.KeyMsg 处理 q/Q/esc/ctrl+c 立即 tea.Quit\n3. 提示文案改为 Press q or Esc to exit\n4. 进度条 width 改为 46，box 64，WindowSize 时 cap 宽度，避免换行",
+    "expected_outcome": "等待时可见配对码；q/Esc 可退出；进度条单行不换行",
+    "file_changes": {
+      "modified": [
+        "internal/wormhole/ui.go - code 展示、key 处理、progress width",
+        "cmd/wormhole/client.go - RunTransferUI 传 pairCode",
+        "cmd/wormhole/receive.go - RunTransferUI 传 pairCode"
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-02-11 15:45:00",
+    "original_prompt": "增加接收成功的信息展示：收到了几个文件以及对应的文件名列表。希望传输完成的文件也在 UI 的包裹下展示。",
+    "summary": "Wormhole 接收成功信息与传输完成 UI 内展示",
+    "action": "1. 新增 ReceiveResult{FilePath,Text}，Receive 填充 result\n2. DoneMsg 增加 Result 字段，RunTransferUI 接受 result *ReceiveResult\n3. transferModel 增加 doneResult，DoneMsg 时不再立即 Quit，等待用户按 q\n4. View 中当 doneResult 非空时展示 Transfer Complete、Received 1 file/Received text",
+    "expected_outcome": "接收完成后在 TUI box 内展示文件路径或文本，按 q 退出",
+    "file_changes": {
+      "modified": [
+        "internal/wormhole/client.go - ReceiveResult、Receive 填充 result",
+        "internal/wormhole/ui.go - DoneMsg.Result、doneResult 展示",
+        "cmd/wormhole/receive.go - 传 &result，移除退出后打印",
+        "cmd/wormhole/client.go - RunTransferUI 传 nil(result)"
+      ]
+    }
+  },
+  {
+    "timestamp": "2026-02-11 15:50:00",
+    "original_prompt": "推出发送后一直重试会报 broken pipe，relay 没清理连接。same role rejected 时第一个等待者可能已断开。",
+    "summary": "Wormhole relay 断连检测与同 role 替换（规划）",
+    "action": "同 role 到达时，对 slot.firstConn 执行 Write 探测；若失败则视为断连，删除 room、close(ch)，新连接作为新的 first arrival。roomSlot 增加 firstConn 存储。注意：需避免 goto 跨变量声明，可改用条件分支。",
+    "expected_outcome": "首个等待者退出后重试可重新建立连接",
+    "file_changes": {
+      "modified": ["internal/wormhole/server.go - 同 role 探测 firstConn、replace 逻辑"]
+    }
+  },
+  {
+    "timestamp": "2026-02-11 15:55:00",
+    "original_prompt": "支持配置单个连接窗口可使用次数，加一个参数，多个人都可以使用这个连接。",
+    "summary": "Wormhole relay --uses 参数：单个 code 可复用 N 次",
+    "action": "1. RelayServer 增加 uses 字段，NewRelayServer(timeout, uses)\n2. roomSlot 增加 usesLeft，配对完成后 decrement，若 >0 则 reset slot(waitingRole=-1) 供下次配对\n3. 新增 relay -u/--uses N，0=无限。env CLI_RELAY_USES\n4. 配对后 first 调用 cleanupRoomAfterPair，根据 usesLeft 决定 delete 或 reset",
+    "expected_outcome": "cli wormhole relay -u 5 时同一 code 可被 5 对使用；-u 0 无限",
+    "file_changes": {
+      "modified": [
+        "internal/wormhole/server.go - uses、usesLeft、cleanupRoomAfterPair、reset 逻辑",
+        "cmd/wormhole/relay.go - --uses 参数、NewRelayServer(timeout, uses)"
+      ]
+    }
   }
 ]

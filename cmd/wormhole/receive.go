@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/A-Flex-Box/cli/internal/config"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/A-Flex-Box/cli/internal/logger"
 	wh "github.com/A-Flex-Box/cli/internal/wormhole"
 	"github.com/spf13/cobra"
@@ -45,23 +44,12 @@ func newReceiveCmd(cfg *config.WormholeConfig) *cobra.Command {
 
 			var receivedText string
 			var result wh.ReceiveResult
-			err := wh.RunTransferUI("Receiving...", 0, pairCode, func(onProgress func(int64, int64)) error {
+			err := wh.RunTransferUI("Receiving...", 0, pairCode, &result, func(onProgress func(int64, int64)) error {
 				return wh.Receive(relayAddr, pairCode, dir, onProgress, &receivedText, &result)
 			})
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
 				os.Exit(1)
-			}
-			if receivedText != "" {
-				box := lipgloss.NewStyle().
-					Border(lipgloss.RoundedBorder()).
-					BorderForeground(lipgloss.Color("#874BFD")).
-					Padding(1, 2).
-					Width(60)
-				fmt.Println(box.Render(receivedText))
-			}
-			if result.FilePath != "" {
-				fmt.Printf("\nReceived 1 file:\n  • %s\n", result.FilePath)
 			}
 		},
 	}
