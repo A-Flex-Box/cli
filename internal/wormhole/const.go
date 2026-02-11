@@ -5,6 +5,10 @@ import "errors"
 const (
 	// MagicVerify is sent after handshake to verify the channel is secure.
 	MagicVerify = "WORMHOLE_OK"
+
+	// Mode bytes: sent right after crypto setup to distinguish transfer vs tunnel.
+	ModeFile   = 0x01
+	ModeTunnel = 0x02
 	// CurveSIEC is the curve name for PAKE (siec is fast and secure).
 	CurveSIEC = "siec"
 	// frameLenBytes is the length prefix size for frames.

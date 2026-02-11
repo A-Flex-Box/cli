@@ -13,6 +13,6 @@ func NewCmd(cfg *config.WormholeConfig) *cobra.Command {
 		Short:   "Secure P2P file and text transfer via relay",
 		Example: "cli wormhole send file ./data.zip",
 	}
-	cmd.AddCommand(newRelayCmd(), newSendCmd(cfg), newReceiveCmd(cfg))
+	cmd.AddCommand(newRelayCmd(), newSendCmd(cfg), newReceiveCmd(cfg), newExposeCmd(cfg), newConnectCmd(cfg))
 	return cmd
 }
