@@ -32,10 +32,21 @@ func ParseRelayAddr(addr string) (string, error) {
 	return addr, nil
 }
 
-// DialRelay connects to relay, sends RoomID, and returns the connection (piped to peer after match).
-func DialRelay(relayAddr, code string) (net.Conn, error) {
+// Role bytes for relay protocol (must match PAKE: 0=sender, 1=receiver).
+const (
+	RoleSender   = 0
+	RoleReceiver = 1
+)
+
+// DialRelay connects to relay, sends RoomID+role, and returns the connection (piped to opposite role after match).
+// Relay pairs sender only with receiver to avoid "can't have its own role" in PAKE.
+func DialRelay(relayAddr, code string, isSender bool) (net.Conn, error) {
+	role := RoleReceiver
+	if isSender {
+		role = RoleSender
+	}
 	logger.Info("wormhole.DialRelay start", logger.Context("params", map[string]any{
-		"relay_addr": relayAddr, "code": code, "room_id_len": roomIDLen,
+		"relay_addr": relayAddr, "code": code, "room_id_len": roomIDLen, "role": role,
 	})...)
 	addr, err := ParseRelayAddr(relayAddr)
 	if err != nil {
@@ -53,6 +64,11 @@ func DialRelay(relayAddr, code string) (net.Conn, error) {
 		logger.Warn("wormhole.DialRelay write room_id failed", zap.Error(err))
 		return nil, err
 	}
+	if _, err := conn.Write([]byte{byte(role)}); err != nil {
+		conn.Close()
+		logger.Warn("wormhole.DialRelay write role failed", zap.Error(err))
+		return nil, err
+	}
 	logger.Info("wormhole.DialRelay done", logger.Context("result", map[string]any{
 		"addr": addr, "local": conn.LocalAddr().String(), "remote": conn.RemoteAddr().String(),
 	})...)
@@ -64,7 +80,7 @@ func SendFile(relayAddr, code, filePath string, onProgress func(int64, int64)) e
 	logger.Info("wormhole.SendFile start", logger.Context("params", map[string]any{
 		"relay_addr": relayAddr, "code": code, "file_path": filePath, "has_progress_cb": onProgress != nil,
 	})...)
-	conn, err := DialRelay(relayAddr, code)
+	conn, err := DialRelay(relayAddr, code, true)
 	if err != nil {
 		return err
 	}
@@ -139,7 +155,7 @@ func SendText(relayAddr, code, text string) error {
 	logger.Info("wormhole.SendText start", logger.Context("params", map[string]any{
 		"relay_addr": relayAddr, "code": code, "text_len": len(text),
 	})...)
-	conn, err := DialRelay(relayAddr, code)
+	conn, err := DialRelay(relayAddr, code, true)
 	if err != nil {
 		return err
 	}
@@ -158,6 +174,7 @@ func SendText(relayAddr, code, text string) error {
 	if err := WriteMetaHeader(secure, h); err != nil {
 		return err
 	}
+	logger.Debug("wormhole.SendText meta header sent, writing body")
 	_, err = secure.Write([]byte(text))
 	if err != nil {
 		logger.Warn("wormhole.SendText write failed", zap.Error(err))
@@ -168,11 +185,12 @@ func SendText(relayAddr, code, text string) error {
 }
 
 // Receive receives data from the wormhole (file or text).
-func Receive(relayAddr, code, outDir string, onProgress func(int64, int64)) error {
+// If textResult is non-nil and payload is text, the received text is stored there (caller should print after TUI exits).
+func Receive(relayAddr, code, outDir string, onProgress func(int64, int64), textResult *string) error {
 	logger.Info("wormhole.Receive start", logger.Context("params", map[string]any{
 		"relay_addr": relayAddr, "code": code, "out_dir": outDir, "has_progress_cb": onProgress != nil,
 	})...)
-	conn, err := DialRelay(relayAddr, code)
+	conn, err := DialRelay(relayAddr, code, false)
 	if err != nil {
 		return err
 	}
@@ -237,17 +255,22 @@ func Receive(relayAddr, code, outDir string, onProgress func(int64, int64)) erro
 		return nil
 
 	case TypeText:
+		logger.Debug("wormhole.Receive reading text body", logger.Context("params", map[string]any{"size": h.Size})...)
 		data := make([]byte, h.Size)
 		if _, err := io.ReadFull(secure, data); err != nil {
 			return err
 		}
-		box := lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#874BFD")).
-			Padding(1, 2).
-			Width(60)
 		logger.Info("wormhole.Receive text done", logger.Context("result", map[string]any{"bytes": len(data)})...)
-		fmt.Println(box.Render(string(data)))
+		if textResult != nil {
+			*textResult = string(data)
+		} else {
+			box := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#874BFD")).
+				Padding(1, 2).
+				Width(60)
+			fmt.Println(box.Render(string(data)))
+		}
 		return nil
 
 	default:

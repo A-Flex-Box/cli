@@ -1,36 +1,67 @@
 package logger
 
 import (
-	"sync"
-
 	"go.uber.org/zap"
 )
 
-var (
-	global     *zap.Logger
-	globalOnce sync.Once
-)
+// Package-level API: use these instead of logger.L.Info(...) for convenience.
+// L and S are set by Setup() in cmd/root.go PersistentPreRun.
 
-// SetGlobalLogger sets the global logger (e.g. from root PersistentPreRun).
-func SetGlobalLogger(l *zap.Logger) {
-	global = l
+// Debug logs at DEBUG level. Hidden on console when --debug is false.
+func Debug(msg string, fields ...zap.Field) {
+	if L != nil {
+		L.Debug(msg, fields...)
+	}
 }
 
-// Global returns the global logger. If not set, returns default NewLogger().
+// Info logs at INFO level.
+func Info(msg string, fields ...zap.Field) {
+	if L != nil {
+		L.Info(msg, fields...)
+	}
+}
+
+// Warn logs at WARN level.
+func Warn(msg string, fields ...zap.Field) {
+	if L != nil {
+		L.Warn(msg, fields...)
+	}
+}
+
+// Error logs at ERROR level.
+func Error(msg string, fields ...zap.Field) {
+	if L != nil {
+		L.Error(msg, fields...)
+	}
+}
+
+// Fatal logs at FATAL level and exits.
+func Fatal(msg string, fields ...zap.Field) {
+	if L != nil {
+		L.Fatal(msg, fields...)
+	}
+}
+
+// Infof logs with fmt-style template (SugaredLogger).
+func Infof(template string, args ...interface{}) {
+	if S != nil {
+		S.Infof(template, args...)
+	}
+}
+
+// Sync flushes buffered log entries. Call in PersistentPostRun.
+func Sync() error {
+	if L != nil {
+		return L.Sync()
+	}
+	return nil
+}
+
+// Global returns the global *zap.Logger. For code that needs to pass logger to functions
+// (e.g. printerpkg.AutoSetup). Returns L; if L is nil (before Setup), returns zap.NewNop().
 func Global() *zap.Logger {
-	globalOnce.Do(func() {
-		if global == nil {
-			global = NewLogger()
-		}
-	})
-	return global
+	if L != nil {
+		return L
+	}
+	return zap.NewNop()
 }
-
-// Package-level API: call directly without logger.Global().
-
-func Debug(msg string, fields ...zap.Field)   { Global().Debug(msg, fields...) }
-func Info(msg string, fields ...zap.Field)    { Global().Info(msg, fields...) }
-func Warn(msg string, fields ...zap.Field)    { Global().Warn(msg, fields...) }
-func Error(msg string, fields ...zap.Field)   { Global().Error(msg, fields...) }
-func Fatal(msg string, fields ...zap.Field)   { Global().Fatal(msg, fields...) }
-func Sync() error                             { return Global().Sync() }

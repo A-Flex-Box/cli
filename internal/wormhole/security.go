@@ -74,20 +74,25 @@ func RunHandshake(conn io.ReadWriter, password string, isSender bool) ([]byte, e
 // IV is derived from SHA256 variants of the session key.
 type AESCTRCipher struct{}
 
-// NewDuplex returns enc/dec streams with distinct IVs.
-func (c *AESCTRCipher) NewDuplex(key []byte) (encStream, decStream cipher.Stream, err error) {
-	// Derive AES-256 key and two IVs from session key
+// NewDuplex returns enc/dec streams. Sender's enc and receiver's dec must use the same IV
+// so decryption matches encryption. Role swap ensures: sender enc=iv1, receiver dec=iv1.
+func (c *AESCTRCipher) NewDuplex(key []byte, isSender bool) (encStream, decStream cipher.Stream, err error) {
 	digest := sha256.Sum256(key)
 	aesKey := digest[:]
 
-	ivEnc := sha256.Sum256(append(key, 0x01))
-	ivDec := sha256.Sum256(append(key, 0x02))
+	iv1 := sha256.Sum256(append(key, 0x01))
+	iv2 := sha256.Sum256(append(key, 0x02))
 
 	block, err := aes.NewCipher(aesKey)
 	if err != nil {
 		return nil, nil, err
 	}
-	return cipher.NewCTR(block, ivEnc[:16]), cipher.NewCTR(block, ivDec[:16]), nil
+	// Sender->receiver: sender enc=iv1, receiver dec=iv1.
+	// Receiver->sender: receiver enc=iv2, sender dec=iv2.
+	if isSender {
+		return cipher.NewCTR(block, iv1[:16]), cipher.NewCTR(block, iv2[:16]), nil
+	}
+	return cipher.NewCTR(block, iv2[:16]), cipher.NewCTR(block, iv1[:16]), nil
 }
 
 // DefaultHandshaker is the default PAKE handshaker (injectable for tests).

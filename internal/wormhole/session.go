@@ -54,7 +54,7 @@ func Upgrade(conn net.Conn, password string, isSender bool, handshaker Handshake
 	}
 	logger.Debug("PAKE handshake completed")
 
-	encStream, decStream, err := streamCipher.NewDuplex(key)
+	encStream, decStream, err := streamCipher.NewDuplex(key, isSender)
 	if err != nil {
 		return nil, err
 	}

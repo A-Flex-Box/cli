@@ -20,7 +20,7 @@ var (
 	version   = "dev"
 	commit    = "none"
 	date      = "unknown"
-	logLevel  string
+	debugMode bool
 )
 
 var rootCmd = &cobra.Command{
@@ -29,26 +29,21 @@ var rootCmd = &cobra.Command{
 	Long:    `A powerful CLI tool created via automated scaffolding.`,
 	Example: "cli version",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		mgr := config.NewManager()
-		cfg, _ := mgr.Load()
-		level := logger.ParseLogLevel(logLevel)
-		if level == logger.LevelInfo && cfg != nil {
-			if cfg.LogLevel != "" {
-				level = logger.ParseLogLevel(cfg.LogLevel)
-			} else if cfg.Debug {
-				level = logger.LevelDebug
+		// --debug controls console verbosity: false=INFO+, true=DEBUG+
+		// Config can override: if config has Debug or log_level=debug, enable debug
+		debug := debugMode
+		if !debug {
+			mgr := config.NewManager()
+			cfg, _ := mgr.Load()
+			if cfg != nil && (cfg.Debug || cfg.LogLevel == "debug") {
+				debug = true
 			}
 		}
-		cfgLog := logger.LoggerConfig{
-			Level:   level,
-			LogPath: "",
-		}
-		if level == logger.LevelDebug {
-			cfgLog.LogPath = logger.DefaultLogPath()
-			cfgLog.LogRotation = logger.DefaultLogRotation()
-		}
-		logger.SetGlobalLogger(logger.NewLoggerWithConfig(cfgLog))
+		logger.Setup(debug)
 		return nil
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		_ = logger.Sync()
 	},
 }
 
@@ -72,7 +67,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "", "Log level: debug, info, warn, error (default from config)")
+	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "Enable debug logs on console (file always records debug)")
 	rootCmd.AddCommand(versionCmd)
 
 	mgr := config.NewManager()

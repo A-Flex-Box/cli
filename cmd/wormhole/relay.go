@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/A-Flex-Box/cli/internal/logger"
 	wh "github.com/A-Flex-Box/cli/internal/wormhole"
 	"github.com/spf13/cobra"
 )
@@ -28,14 +29,19 @@ func newRelayCmd() *cobra.Command {
 			defer ln.Close()
 
 			srv := wh.NewRelayServer(timeout)
+			logger.Info("relay.listening", logger.Context("params", map[string]any{
+				"addr": addr, "timeout_sec": timeout.Seconds(),
+			})...)
 			fmt.Printf("Relay listening on %s (timeout: %v)\n", addr, timeout)
 
 			for {
 				conn, err := ln.Accept()
 				if err != nil {
+					logger.Warn("relay.Accept error", logger.Context("params", map[string]any{"error": err.Error()})...)
 					fmt.Printf("Accept error: %v\n", err)
 					continue
 				}
+				logger.Info("relay.Accept new conn", logger.Context("params", map[string]any{"remote": conn.RemoteAddr().String()})...)
 				go srv.HandleConn(conn)
 			}
 		},

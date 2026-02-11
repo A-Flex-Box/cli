@@ -20,7 +20,7 @@ type Handshaker interface {
 // StreamCipher creates encrypt/decrypt streams from a session key.
 // Allows swapping AES-CTR for other ciphers (e.g. ChaCha20).
 type StreamCipher interface {
-	// NewDuplex returns two cipher.Stream instances for duplex: enc for our writes, dec for our reads.
-	// They must use different IVs/nonces to avoid keystream reuse.
-	NewDuplex(key []byte) (encStream, decStream cipher.Stream, err error)
+	// NewDuplex returns enc (our writes) and dec (our reads) streams.
+	// Sender's encStream must match receiver's decStream (same IV) for the wire; isSender selects.
+	NewDuplex(key []byte, isSender bool) (encStream, decStream cipher.Stream, err error)
 }

@@ -76,17 +76,20 @@ make help        # 查看所有可用命令
 将带元数据的文件添加到项目历史记录中。
 
 **用法：**
+
 ```bash
 cli history add <file>
 ```
 
 **示例：**
+
 ```bash
 # 添加一个shell脚本到历史记录
 cli history add ai_response.sh
 ```
 
 **功能：**
+
 - 自动提取文件头部的元数据（timestamp, summary, action等）
 - 生成项目结构快照
 - 将记录追加到 `history/history.json`
@@ -108,6 +111,7 @@ cli printer --setup
 #### 2.2 打印PDF文件
 
 **本地文件打印：**
+
 ```bash
 # 自动选择第一台打印机
 cli printer --file document.pdf --auto
@@ -126,6 +130,7 @@ cli printer --file document.pdf --sides two-sided-long-edge --color monochrome -
 ```
 
 **远程URL打印（自动下载到临时目录）：**
+
 ```bash
 # 从URL下载并打印（自动清理临时文件）
 cli printer --url "https://example.com/document.pdf" --auto
@@ -135,6 +140,7 @@ cli printer --url "https://example.com/document.pdf" --printer "MyPrinter" --cop
 ```
 
 **打印选项：**
+
 - `--copies`: 打印份数 (1-999)
 - `--sides`: 单双面设置
   - `one-sided`: 单面
@@ -154,11 +160,13 @@ cli printer --url "https://example.com/document.pdf" --printer "MyPrinter" --cop
 #### 2.3 扫描文档
 
 **列出可用扫描设备：**
+
 ```bash
 cli printer --list-scan-devices
 ```
 
 **基本扫描：**
+
 ```bash
 # 自动选择设备扫描
 cli printer --scan
@@ -177,6 +185,7 @@ cli printer --scan --scan-source adf --scan-resolution 600 --scan-color grayscal
 ```
 
 **扫描选项：**
+
 - `--scan-device`: 扫描设备名称
 - `--scan-output`: 输出文件路径（默认自动生成）
 - `--scan-resolution`: 分辨率DPI (150, 200, 300, 600)
@@ -187,6 +196,7 @@ cli printer --scan --scan-source adf --scan-resolution 600 --scan-color grayscal
 - `--scan-batch-format`: 批量扫描文件名格式（如 scan_%03d.jpg）
 
 **完整示例：**
+
 ```bash
 # 打印选项说明
 cli printer --file doc.pdf \
@@ -221,14 +231,17 @@ cli printer --url "https://example.com/report.pdf" \
 创建 tar.gz 归档文件，可选择是否删除源文件。
 
 **用法：**
+
 ```bash
 cli archive [flags]
 ```
 
 **选项：**
+
 - `-d, --delete`: 归档后删除源文件
 
 **示例：**
+
 ```bash
 # 创建归档（保留源文件）
 cli archive
@@ -238,6 +251,7 @@ cli archive --delete
 ```
 
 **功能：**
+
 - 自动生成带时间戳的归档文件名（格式：`archive_YYYYMMDD_HHMMSS.tar.gz`）
 - 排除 `.git`、`history`、历史归档文件等
 - 保留历史标准归档文件
@@ -249,17 +263,20 @@ cli archive --delete
 检查环境健康状态，验证 Git、Go 以及项目配置文件是否存在且正常。
 
 **用法：**
+
 ```bash
 cli doctor
 ```
 
 **功能：**
+
 - 检查 Go 是否已安装
 - 检查 Git 是否已安装
 - 检查 Make 是否已安装
 - 检查历史数据库是否存在
 
 **示例：**
+
 ```bash
 cli doctor
 ```
@@ -320,11 +337,8 @@ make run ARGS="<command> <args>"
        EnumNone   EnumName = "none"   // 表示空/无/零值语义
    )
    ```
-
 2. **禁止空字符串与零值**：枚举不得使用空字符串 `""` 或类似零值。表示「无」「不适用」等语义时，应使用显式值如 `"none"`、`"na"` 等。
-
 3. **命名约定**：常量名采用 `类型名 + 用途` 的 PascalCase，如 `InstallStatusInstalled`、`PortStatusNone`。
-
 4. **注册与使用**：在包内通过 `const` 块统一声明，使用时通过常量引用，避免魔法字符串。
 
 ---
@@ -332,3 +346,27 @@ make run ARGS="<command> <args>"
 ## 📄 License
 
 See LICENSE file for details.
+
+
+## There are some TODOs for the project, and these shouldn't be edited by agents.
+
+### v1.0.0
+
+- [X] history中应该加入迭代字段,记录操作的迭代实现溯源(p0)
+    - [**hash** 6886874]
+- [X] cmd目录下不应该包含具体的业务逻辑,应该将具体的业务逻辑放在app目录下,cmd目录下只应该包含具体的业务逻辑的调用(p0)
+    - [**hash** 6886874]
+
+- [ ] 日志优化需要增加caller信息(p0)
+- [ ] wormhole测试,存在问题依赖日志调试(p0)
+- [ ] p2p方案实现,设备具有远程一对一连接功能,目的是为了实现启动服务他人可直接连接,或许简单的内网穿透就可以实现(p0)
+
+
+- [ ] cli的具体用途与使用场景确定(p1)
+- [ ] 网络连接根据协议实现详细的链路追踪(p1)q
+- [ ] cli的命令行交互设计,类似于doctor其他的标准输出也应该拥有基本的表格或其他可视化样式(p1)
+
+- [ ] 根据服务类型真实动态的检测服务运行与安装信息(p2)
+- [ ] 对于scripts中的app应该将其中的makefile提取在外部传入环境变量控制启动哪个app(p2)
+- [ ] 文本压缩设计?根据调研判断可行性,以及压缩收益(p3)
+
