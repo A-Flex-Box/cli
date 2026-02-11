@@ -26,6 +26,10 @@ CC_RESET  := \033[0m
 
 all: build
 
+deps:
+	@go mod tidy
+	@printf "$(CC_GREEN)✔  Dependencies updated$(CC_RESET)\n"
+
 build:
 	@mkdir -p $(BUILD_DIR)
 	@printf "$(CC_CYAN)➜  Compiling...$(CC_RESET)\n"

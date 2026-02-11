@@ -86,7 +86,7 @@ func init() {
 
 	rootCmd.AddCommand(cmdarchive.NewCmd())
 	rootCmd.AddCommand(cmdconfig.NewCmd(cfg, mgr))
-	rootCmd.AddCommand(cmddoctor.NewCmd())
+	rootCmd.AddCommand(cmddoctor.NewCmd(cfg))
 	rootCmd.AddCommand(cmdhistory.NewCmd())
 	rootCmd.AddCommand(cmdprinter.NewCmd())
 	rootCmd.AddCommand(cmdwormhole.NewCmd(&cfg.Wormhole))

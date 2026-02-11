@@ -189,3 +189,89 @@ func Run() {
 	r := DefaultRegistry.Run()
 	Print(r)
 }
+
+// RenderCheckReport returns the tools+services section as a string for embedding in doctor check.
+func RenderCheckReport(r *Report) string {
+	var blocks []string
+	if len(r.Tools) > 0 {
+		rows := make([][]string, 0, len(r.Tools))
+		for _, t := range r.Tools {
+			detail := t.Version
+			if detail == "" {
+				detail = t.Path
+			}
+			rows = append(rows, []string{t.Name, string(t.Status), trunc(detail, 45)})
+		}
+		toolsTitle := titleStyle.Render("Development Tools")
+		toolsTable := renderTable(
+			[]string{"Name", "Status", "Version"},
+			rows,
+			func(row, col int, cell string) lipgloss.Style {
+				s := lipgloss.NewStyle().Padding(0, 1)
+				if col == 0 {
+					s = s.Foreground(lipgloss.Color("205"))
+				}
+				if col == 1 {
+					if cell == string(InstallStatusInstalled) {
+						s = s.Foreground(special)
+					} else {
+						s = s.Foreground(danger)
+					}
+				}
+				if col == 2 {
+					s = s.Foreground(muted)
+				}
+				return s
+			},
+		)
+		blocks = append(blocks, lipgloss.JoinVertical(lipgloss.Left, toolsTitle, toolsTable))
+	}
+	if len(r.Svc) > 0 {
+		rows := make([][]string, 0, len(r.Svc))
+		for _, s := range r.Svc {
+			detail := s.Version
+			if detail == "" {
+				detail = s.Path
+			}
+			portInfo := ""
+			if s.Port != "" {
+				portInfo = fmt.Sprintf("port %s: %s", s.Port, s.PortStatus)
+			}
+			rows = append(rows, []string{s.Name, string(s.Status), trunc(detail, 35), portInfo})
+		}
+		svcTitle := titleStyle.Render("Infrastructure Services")
+		svcTable := renderTable(
+			[]string{"Name", "Status", "Version", "Port"},
+			rows,
+			func(row, col int, cell string) lipgloss.Style {
+				s := lipgloss.NewStyle().Padding(0, 1)
+				if col == 0 {
+					s = s.Foreground(lipgloss.Color("205"))
+				}
+				if col == 1 {
+					if cell == string(InstallStatusInstalled) {
+						s = s.Foreground(special)
+					} else {
+						s = s.Foreground(danger)
+					}
+				}
+				if col == 2 {
+					s = s.Foreground(muted)
+				}
+				if col == 3 {
+					if strings.Contains(cell, "listening") && !strings.Contains(cell, "not") {
+						s = s.Foreground(special)
+					} else {
+						s = s.Foreground(muted)
+					}
+				}
+				return s
+			},
+		)
+		blocks = append(blocks, lipgloss.JoinVertical(lipgloss.Left, svcTitle, svcTable))
+	}
+	if len(blocks) == 0 {
+		return ""
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, blocks...)
+}
