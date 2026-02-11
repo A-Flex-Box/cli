@@ -46,7 +46,7 @@ func newSendCmd(cfg *config.WormholeConfig) *cobra.Command {
 					os.Exit(1)
 				}
 				title := "Sending: " + filepath.Base(filePath)
-				err = wh.RunTransferUI(title, info.Size(), func(onProgress func(int64, int64)) error {
+				err = wh.RunTransferUI(title, info.Size(), pairCode, func(onProgress func(int64, int64)) error {
 					return wh.SendFile(relayAddr, pairCode, filePath, onProgress)
 				})
 				if err != nil {

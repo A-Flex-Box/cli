@@ -31,6 +31,7 @@ type transferModel struct {
 	current  int64
 	total    int64
 	title    string
+	code     string // pairing code to display while waiting
 	ch       <-chan tea.Msg
 	err      error
 }
@@ -42,6 +43,11 @@ func (m transferModel) Init() tea.Cmd {
 func (m transferModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// q, Esc, Ctrl+C: always allow exit (fixes "Press any key" being ignored during wait)
+		switch msg.String() {
+		case "q", "Q", "esc", "ctrl+c":
+			return m, tea.Quit
+		}
 		done := m.err != nil || (m.total > 0 && m.current >= m.total)
 		if done {
 			return m, tea.Quit
@@ -49,10 +55,15 @@ func (m transferModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.WindowSizeMsg:
-		m.progress.Width = msg.Width - 4
-		if m.progress.Width > 80 {
-			m.progress.Width = 80
+		// Keep progress bar single-line: bar+percent must fit in box (52 visible chars)
+		w := msg.Width - 6
+		if w > 46 {
+			w = 46
 		}
+		if w < 20 {
+			w = 20
+		}
+		m.progress.Width = w
 		return m, nil
 
 	case ProgressMsg:
@@ -79,14 +90,21 @@ func (m transferModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m transferModel) View() string {
 	var b strings.Builder
 
+	// Width 64 ensures progress bar + percent stay on single line
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(uiHighlight).
 		Padding(1, 2).
-		Width(60)
+		Width(64)
 
 	b.WriteString(lipgloss.NewStyle().Foreground(uiSpecial).Render("Secure Connection Established"))
 	b.WriteString("\n\n")
+	if m.code != "" {
+		b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Code: "))
+		b.WriteString(lipgloss.NewStyle().Foreground(uiHighlight).Bold(true).Render(m.code))
+		b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render(" (share with peer)"))
+		b.WriteString("\n\n")
+	}
 	b.WriteString(lipgloss.NewStyle().Foreground(uiHighlight).Bold(true).Render(m.title))
 	b.WriteString("\n\n")
 	if m.total > 0 {
@@ -104,7 +122,7 @@ func (m transferModel) View() string {
 		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#F25D94")).Render("Error: "+m.err.Error()))
 	}
 	b.WriteString("\n\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Press any key to exit"))
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Press q or Esc to exit"))
 
 	return box.Render(b.String())
 }
@@ -116,8 +134,8 @@ func waitForTransferMsg(ch <-chan tea.Msg) tea.Cmd {
 }
 
 // RunTransferUI runs a transfer with Bubble Tea + Bubbles progress bar.
-// fn receives an onProgress callback; call it with (current, total) during transfer.
-func RunTransferUI(title string, total int64, fn func(onProgress func(int64, int64)) error) error {
+// code is displayed in the UI while waiting (empty = hide). fn receives an onProgress callback.
+func RunTransferUI(title string, total int64, code string, fn func(onProgress func(int64, int64)) error) error {
 	ch := make(chan tea.Msg, 64)
 
 	go func() {
@@ -132,13 +150,14 @@ func RunTransferUI(title string, total int64, fn func(onProgress func(int64, int
 
 	prog := progress.New(
 		progress.WithDefaultGradient(),
-		progress.WithWidth(60),
+		progress.WithWidth(46), // fits in box without wrap (bar ~41 + " 100%" ~5)
 	)
 
 	m := transferModel{
 		progress: prog,
 		total:    total,
 		title:    title,
+		code:     code,
 		ch:       ch,
 	}
 

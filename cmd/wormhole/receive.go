@@ -44,8 +44,9 @@ func newReceiveCmd(cfg *config.WormholeConfig) *cobra.Command {
 			}
 
 			var receivedText string
-			err := wh.RunTransferUI("Receiving...", 0, func(onProgress func(int64, int64)) error {
-				return wh.Receive(relayAddr, pairCode, dir, onProgress, &receivedText)
+			var result wh.ReceiveResult
+			err := wh.RunTransferUI("Receiving...", 0, pairCode, func(onProgress func(int64, int64)) error {
+				return wh.Receive(relayAddr, pairCode, dir, onProgress, &receivedText, &result)
 			})
 			if err != nil {
 				fmt.Printf("Error: %v\n", err)
@@ -58,6 +59,9 @@ func newReceiveCmd(cfg *config.WormholeConfig) *cobra.Command {
 					Padding(1, 2).
 					Width(60)
 				fmt.Println(box.Render(receivedText))
+			}
+			if result.FilePath != "" {
+				fmt.Printf("\nReceived 1 file:\n  • %s\n", result.FilePath)
 			}
 		},
 	}

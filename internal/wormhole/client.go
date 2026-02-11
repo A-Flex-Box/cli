@@ -184,9 +184,16 @@ func SendText(relayAddr, code, text string) error {
 	return nil
 }
 
+// ReceiveResult holds what was received (one of file or text per connection).
+type ReceiveResult struct {
+	FilePath string // set when TypeFile (saved path)
+	Text     string // set when TypeText
+}
+
 // Receive receives data from the wormhole (file or text).
-// If textResult is non-nil and payload is text, the received text is stored there (caller should print after TUI exits).
-func Receive(relayAddr, code, outDir string, onProgress func(int64, int64), textResult *string) error {
+// If textResult is non-nil and payload is text, the received text is stored there.
+// If result is non-nil, FilePath or Text is set so caller can show success info.
+func Receive(relayAddr, code, outDir string, onProgress func(int64, int64), textResult *string, result *ReceiveResult) error {
 	logger.Info("wormhole.Receive start", logger.Context("params", map[string]any{
 		"relay_addr": relayAddr, "code": code, "out_dir": outDir, "has_progress_cb": onProgress != nil,
 	})...)
@@ -252,6 +259,9 @@ func Receive(relayAddr, code, outDir string, onProgress func(int64, int64), text
 		logger.Info("wormhole.Receive file done", logger.Context("result", map[string]any{
 			"out_path": outPath, "bytes_read": read, "total_size": h.Size,
 		})...)
+		if result != nil {
+			result.FilePath = outPath
+		}
 		return nil
 
 	case TypeText:
@@ -261,15 +271,20 @@ func Receive(relayAddr, code, outDir string, onProgress func(int64, int64), text
 			return err
 		}
 		logger.Info("wormhole.Receive text done", logger.Context("result", map[string]any{"bytes": len(data)})...)
+		s := string(data)
 		if textResult != nil {
-			*textResult = string(data)
-		} else {
+			*textResult = s
+		}
+		if result != nil {
+			result.Text = s
+		}
+		if textResult == nil && result == nil {
 			box := lipgloss.NewStyle().
 				Border(lipgloss.RoundedBorder()).
 				BorderForeground(lipgloss.Color("#874BFD")).
 				Padding(1, 2).
 				Width(60)
-			fmt.Println(box.Render(string(data)))
+			fmt.Println(box.Render(s))
 		}
 		return nil
 
