@@ -207,3 +207,50 @@ func RenderSecureBox() string {
 		Width(60)
 	return box.Render(lipgloss.NewStyle().Foreground(uiSpecial).Render("Secure Connection Established"))
 }
+
+// RenderTunnelExposeBox renders a tunnel expose ready box with code and port.
+func RenderTunnelExposeBox(code, port string) string {
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(uiHighlight).
+		Padding(1, 2).
+		Width(64)
+
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(uiSpecial).Render("Tunnel Ready (Expose)"))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Code: "))
+	b.WriteString(lipgloss.NewStyle().Foreground(uiHighlight).Bold(true).Render(code))
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render(" (share with peer)"))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Local port: "))
+	b.WriteString(lipgloss.NewStyle().Foreground(uiHighlight).Render(port))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiSpecial).Render("Waiting for connections..."))
+	b.WriteString("\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Press Ctrl+C to stop"))
+	return box.Render(b.String())
+}
+
+// RenderTunnelConnectBox renders a tunnel connect ready box with code and bind addr.
+func RenderTunnelConnectBox(code, bindAddr string) string {
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(uiHighlight).
+		Padding(1, 2).
+		Width(64)
+
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(uiSpecial).Render("Tunnel Ready (Connect)"))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Code: "))
+	b.WriteString(lipgloss.NewStyle().Foreground(uiHighlight).Bold(true).Render(code))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Listening on: "))
+	b.WriteString(lipgloss.NewStyle().Foreground(uiHighlight).Render(bindAddr))
+	b.WriteString("\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiSpecial).Render("Forwarding to remote service..."))
+	b.WriteString("\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(uiMuted).Render("Press Ctrl+C to stop"))
+	return box.Render(b.String())
+}

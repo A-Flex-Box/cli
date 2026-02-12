@@ -8,12 +8,33 @@ import (
 
 	"github.com/A-Flex-Box/cli/internal/logger"
 	"github.com/hashicorp/yamux"
-	"go.uber.org/zap"
 )
 
+// UIEventType identifies the kind of tunnel UI event.
+type UIEventType int
+
+const (
+	EventConnOpen UIEventType = iota
+	EventConnClose
+	EventTraffic
+)
+
+// UIEvent is sent to the tunnel TUI for display.
+type UIEvent struct {
+	Type   UIEventType
+	Msg    string       // Display string
+	Info   *TrafficInfo // For EventTraffic
+	Remote string       // Optional: remote addr
+}
+
+// TunnelOptions holds optional settings for tunnel UI events.
+type TunnelOptions struct {
+	Events chan<- UIEvent // If non-nil, tunnel sends UI events here
+}
+
 // ExposeTunnel dials relay, performs PAKE (sender), sends ModeTunnel, then runs StartExpose.
-// Blocks until the tunnel is closed.
-func ExposeTunnel(relayAddr, code, targetPort string) error {
+// Blocks until the tunnel is closed. opts may be nil.
+func ExposeTunnel(relayAddr, code, targetPort string, opts *TunnelOptions) error {
 	conn, err := DialRelay(relayAddr, code, true)
 	if err != nil {
 		return err
@@ -30,12 +51,12 @@ func ExposeTunnel(relayAddr, code, targetPort string) error {
 		return err
 	}
 	logger.Info("tunnel.expose mode sent, starting yamux server")
-	return StartExpose(secure, targetPort)
+	return StartExpose(secure, targetPort, opts)
 }
 
 // ConnectTunnel dials relay, performs PAKE (receiver), reads mode byte, then runs StartConnect.
-// If mode is ModeFile, returns an error. Blocks until the tunnel is closed.
-func ConnectTunnel(relayAddr, code, bindAddr string) error {
+// If mode is ModeFile, returns an error. Blocks until the tunnel is closed. opts may be nil.
+func ConnectTunnel(relayAddr, code, bindAddr string, opts *TunnelOptions) error {
 	conn, err := DialRelay(relayAddr, code, false)
 	if err != nil {
 		return err
@@ -59,7 +80,7 @@ func ConnectTunnel(relayAddr, code, bindAddr string) error {
 		return fmt.Errorf("unknown mode byte: %d", mode[0])
 	}
 	logger.Info("tunnel.connect mode received, starting yamux client")
-	return StartConnect(secure, bindAddr)
+	return StartConnect(secure, bindAddr, opts)
 }
 
 // yamuxConfig enables keepalive to prevent Relay/NAT from killing idle connections.
@@ -72,13 +93,15 @@ var yamuxConfig = func() *yamux.Config {
 
 // StartExpose creates a yamux server on the secure connection and forwards
 // incoming streams to the local targetPort. Blocks until secureConn is closed.
-func StartExpose(secureConn net.Conn, targetPort string) error {
+// opts may be nil.
+func StartExpose(secureConn net.Conn, targetPort string, opts *TunnelOptions) error {
 	session, err := yamux.Server(secureConn, yamuxConfig)
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 
+	ev := evChan(opts)
 	logger.Info("tunnel.expose session started", logger.Context("params", map[string]any{
 		"target_port": targetPort,
 	})...)
@@ -87,32 +110,54 @@ func StartExpose(secureConn net.Conn, targetPort string) error {
 		stream, err := session.Accept()
 		if err != nil {
 			if session.IsClosed() {
-				logger.Debug("tunnel.expose session closed")
+				logger.Info("tunnel.expose session closed")
 				return nil
 			}
-			logger.Warn("tunnel.expose accept error", zap.Error(err))
+			logger.Info("tunnel.expose accept error", logger.Context("params", map[string]any{"error": err.Error()})...)
 			return err
 		}
 
 		destAddr := "localhost:" + targetPort
 		destConn, err := net.Dial("tcp", destAddr)
 		if err != nil {
-			logger.Warn("tunnel.expose dial target failed", zap.Error(err), zap.String("target", destAddr))
+			sendEvent(ev, UIEvent{Type: EventTraffic, Msg: "[FAIL] dial " + destAddr + ": " + err.Error()})
+			logger.Info("tunnel.expose dial target failed", logger.Context("params", map[string]any{
+				"target": destAddr, "error": err.Error(),
+			})...)
 			stream.Close()
 			continue
 		}
 
-		logger.Debug("tunnel.expose stream accepted, joining", logger.Context("params", map[string]any{
+		sendEvent(ev, UIEvent{Type: EventConnOpen, Msg: "Client Connected", Remote: destAddr})
+		logger.Info("tunnel.expose stream forwarded", logger.Context("params", map[string]any{
 			"target": destAddr,
 		})...)
-		go join(stream, destConn)
+		go join(stream, destConn, ev)
+	}
+}
+
+func evChan(opts *TunnelOptions) chan<- UIEvent {
+	if opts == nil {
+		return nil
+	}
+	return opts.Events
+}
+
+func sendEvent(ch chan<- UIEvent, e UIEvent) {
+	if ch == nil {
+		return
+	}
+	select {
+	case ch <- e:
+	default:
+		// non-blocking; drop if full
 	}
 }
 
 // StartConnect creates a yamux client on the secure connection, listens on
 // bindAddr, and for each local connection opens a new stream and joins.
-// Blocks until secureConn is closed.
-func StartConnect(secureConn net.Conn, bindAddr string) error {
+// Blocks until secureConn is closed. opts may be nil.
+func StartConnect(secureConn net.Conn, bindAddr string, opts *TunnelOptions) error {
 	session, err := yamux.Client(secureConn, yamuxConfig)
 	if err != nil {
 		return err
@@ -125,6 +170,7 @@ func StartConnect(secureConn net.Conn, bindAddr string) error {
 	}
 	defer listener.Close()
 
+	ev := evChan(opts)
 	logger.Info("tunnel.connect listening", logger.Context("params", map[string]any{
 		"bind_addr": bindAddr,
 	})...)
@@ -132,31 +178,50 @@ func StartConnect(secureConn net.Conn, bindAddr string) error {
 	for {
 		localConn, err := listener.Accept()
 		if err != nil {
-			logger.Warn("tunnel.connect accept error", zap.Error(err))
+			logger.Info("tunnel.connect accept error", logger.Context("params", map[string]any{"error": err.Error()})...)
 			return err
 		}
 
+		remote := localConn.RemoteAddr().String()
+		sendEvent(ev, UIEvent{Type: EventConnOpen, Msg: "Client Connected", Remote: remote})
+		logger.Info("tunnel.connect local connection accepted", logger.Context("params", map[string]any{
+			"remote": remote,
+		})...)
+
 		stream, err := session.Open()
 		if err != nil {
-			logger.Warn("tunnel.connect open stream failed", zap.Error(err))
+			sendEvent(ev, UIEvent{Type: EventTraffic, Msg: "[FAIL] open stream: " + err.Error()})
+			logger.Info("tunnel.connect open stream failed", logger.Context("params", map[string]any{
+				"error": err.Error(),
+			})...)
 			localConn.Close()
 			continue
 		}
 
-		logger.Debug("tunnel.connect new stream opened for local conn")
-		go join(localConn, stream)
+		logger.Info("tunnel.connect forwarding", logger.Context("params", map[string]any{
+			"local": remote,
+		})...)
+		go join(localConn, stream, ev)
 	}
 }
 
-// join performs bidirectional copy between two connections.
-// Closes both when either side finishes.
-func join(c1, c2 net.Conn) {
+// join performs bidirectional copy between two connections with optional traffic sniffing.
+// Closes both when either side finishes. events may be nil.
+func join(c1, c2 net.Conn, events chan<- UIEvent) {
 	defer c1.Close()
 	defer c2.Close()
+	defer func() { sendEvent(events, UIEvent{Type: EventConnClose, Msg: "Client Disconnected"}) }()
+
+	var src1 io.Reader = c1
+	if events != nil {
+		src1 = NewSniffingReader(c1, func(info TrafficInfo) {
+			sendEvent(events, UIEvent{Type: EventTraffic, Msg: info.Raw, Info: &info})
+		})
+	}
 
 	done := make(chan struct{}, 1)
 	go func() {
-		io.Copy(c2, c1)
+		io.Copy(c2, src1)
 		if tcp, ok := c2.(*net.TCPConn); ok {
 			tcp.CloseWrite()
 		}
