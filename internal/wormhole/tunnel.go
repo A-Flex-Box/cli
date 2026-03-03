@@ -35,42 +35,52 @@ type TunnelOptions struct {
 // ExposeTunnel dials relay, performs PAKE (sender), sends ModeTunnel, then runs StartExpose.
 // Blocks until the tunnel is closed. opts may be nil.
 func ExposeTunnel(relayAddr, code, targetPort string, opts *TunnelOptions) error {
+	logger.Info("tunnel.expose DialRelay", logger.Context("params", map[string]any{"relay": relayAddr, "code": code})...)
 	conn, err := DialRelay(relayAddr, code, true)
 	if err != nil {
+		logger.Warn("tunnel.expose DialRelay failed", logger.Context("params", map[string]any{"error": err.Error()})...)
 		return err
 	}
 	defer conn.Close()
 
+	logger.Info("tunnel.expose PAKE upgrade (sender)", logger.Context("params", map[string]any{"remote": conn.RemoteAddr().String()})...)
 	secure, err := UpgradeConn(conn, code, true)
 	if err != nil {
+		logger.Warn("tunnel.expose UpgradeConn failed", logger.Context("params", map[string]any{"error": err.Error()})...)
 		return err
 	}
 	defer secure.Close()
 
 	if _, err := secure.Write([]byte{ModeTunnel}); err != nil {
+		logger.Warn("tunnel.expose write ModeTunnel failed", logger.Context("params", map[string]any{"error": err.Error()})...)
 		return err
 	}
-	logger.Info("tunnel.expose mode sent, starting yamux server")
+	logger.Info("tunnel.expose mode sent, starting yamux server", logger.Context("params", map[string]any{"target_port": targetPort})...)
 	return StartExpose(secure, targetPort, opts)
 }
 
 // ConnectTunnel dials relay, performs PAKE (receiver), reads mode byte, then runs StartConnect.
 // If mode is ModeFile, returns an error. Blocks until the tunnel is closed. opts may be nil.
 func ConnectTunnel(relayAddr, code, bindAddr string, opts *TunnelOptions) error {
+	logger.Info("tunnel.connect DialRelay", logger.Context("params", map[string]any{"relay": relayAddr, "code": code})...)
 	conn, err := DialRelay(relayAddr, code, false)
 	if err != nil {
+		logger.Warn("tunnel.connect DialRelay failed", logger.Context("params", map[string]any{"error": err.Error()})...)
 		return err
 	}
 	defer conn.Close()
 
+	logger.Info("tunnel.connect PAKE upgrade (receiver)", logger.Context("params", map[string]any{"remote": conn.RemoteAddr().String()})...)
 	secure, err := UpgradeConn(conn, code, false)
 	if err != nil {
+		logger.Warn("tunnel.connect UpgradeConn failed", logger.Context("params", map[string]any{"error": err.Error()})...)
 		return err
 	}
 	defer secure.Close()
 
 	mode := make([]byte, 1)
 	if _, err := io.ReadFull(secure, mode); err != nil {
+		logger.Warn("tunnel.connect read mode failed", logger.Context("params", map[string]any{"error": err.Error()})...)
 		return err
 	}
 	if mode[0] == ModeFile {
@@ -79,7 +89,7 @@ func ConnectTunnel(relayAddr, code, bindAddr string, opts *TunnelOptions) error 
 	if mode[0] != ModeTunnel {
 		return fmt.Errorf("unknown mode byte: %d", mode[0])
 	}
-	logger.Info("tunnel.connect mode received, starting yamux client")
+	logger.Info("tunnel.connect mode received, starting yamux client", logger.Context("params", map[string]any{"bind_addr": bindAddr})...)
 	return StartConnect(secure, bindAddr, opts)
 }
 
@@ -110,10 +120,10 @@ func StartExpose(secureConn net.Conn, targetPort string, opts *TunnelOptions) er
 		stream, err := session.Accept()
 		if err != nil {
 			if session.IsClosed() {
-				logger.Info("tunnel.expose session closed")
+				logger.Info("tunnel.expose session closed (secure conn closed by peer or network)")
 				return nil
 			}
-			logger.Info("tunnel.expose accept error", logger.Context("params", map[string]any{"error": err.Error()})...)
+			logger.Warn("tunnel.expose accept error", logger.Context("params", map[string]any{"error": err.Error(), "session_closed": session.IsClosed()})...)
 			return err
 		}
 

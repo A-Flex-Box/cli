@@ -50,6 +50,9 @@ func Upgrade(conn net.Conn, password string, isSender bool, handshaker Handshake
 	transport := NewFrameTransport(conn)
 	key, err := handshaker.Run(transport, password, isSender)
 	if err != nil {
+		logger.Warn("wormhole.Upgrade PAKE failed", logger.Context("params", map[string]any{
+			"error": err.Error(), "is_sender": isSender, "remote": conn.RemoteAddr().String(),
+		})...)
 		return nil, err
 	}
 	logger.Debug("PAKE handshake completed")
@@ -74,6 +77,7 @@ func Upgrade(conn net.Conn, password string, isSender bool, handshaker Handshake
 		decrypted := make([]byte, len(frame))
 		decStream.XORKeyStream(decrypted, frame)
 		if string(decrypted) != MagicVerify {
+			logger.Warn("wormhole.Upgrade verification failed (magic mismatch)")
 			return nil, ErrVerifyFailed
 		}
 	}

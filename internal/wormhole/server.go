@@ -95,8 +95,11 @@ func (r *RelayServer) HandleConn(conn net.Conn) {
 	case peer := <-ch:
 		ch <- conn
 		closeOnReturn = false
-		logger.Info("relay.HandleConn piping", logger.Context("params", map[string]any{"room_id": key})...)
+		logger.Info("relay.HandleConn piping", logger.Context("params", map[string]any{
+			"room_id": key, "a": conn.RemoteAddr().String(), "b": peer.RemoteAddr().String(),
+		})...)
 		r.pipe(conn, peer)
+		logger.Info("relay.HandleConn pipe closed", logger.Context("params", map[string]any{"room_id": key})...)
 	case <-time.After(r.timeout):
 		r.mu.Lock()
 		close(ch)
@@ -107,19 +110,22 @@ func (r *RelayServer) HandleConn(conn net.Conn) {
 }
 
 func (r *RelayServer) pipe(a, b net.Conn) {
-	buf := GetBuffer()
-	defer PutBuffer(buf)
+	// 使用独立 buffer，避免双向 copy 共享 buffer 导致数据损坏
+	bufA2B := GetBuffer()
+	bufB2A := GetBuffer()
+	defer PutBuffer(bufA2B)
+	defer PutBuffer(bufB2A)
 
 	done := make(chan struct{}, 1)
 	go func() {
-		io.CopyBuffer(a, b, buf)
+		io.CopyBuffer(a, b, bufA2B)
 		if tcp, ok := a.(*net.TCPConn); ok {
 			tcp.CloseWrite()
 		}
 		done <- struct{}{}
 	}()
 	go func() {
-		io.CopyBuffer(b, a, buf)
+		io.CopyBuffer(b, a, bufB2A)
 		if tcp, ok := b.(*net.TCPConn); ok {
 			tcp.CloseWrite()
 		}
