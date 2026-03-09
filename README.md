@@ -13,6 +13,8 @@
 - **Archive Management**: `cli archive` 创建 tar.gz 归档文件
 - **Wormhole**: `cli wormhole` P2P 文件/文本传输
 - **Environment Check**: `cli doctor` 检查环境健康状态
+- **OpenClaw Deploy**: `cli openclaw` 一键部署 OpenClaw AI Assistant
+- **OpenClaw Deployment**: `cli openclaw` 一键部署 OpenClaw AI Assistant
 
 ## 🚀 快速开始
 

@@ -42,7 +42,8 @@ else
   MKDIR_P = mkdir -p $(1)
 endif
 
-.PHONY: all build clean test help register run install build-windows build-all deps
+.PHONY: all build clean test help register run install build-windows build-all deps \
+        build-gui build-cli build-encrypted
 
 all: build
 
@@ -141,16 +142,67 @@ endif
 test:
 	@go test -v ./...
 
+build-cli:
+	@mkdir -p $(BUILD_DIR)
+	@printf "$(CC_CYAN)➜  Building CLI-only binary (no GUI)...$(CC_RESET)\n"
+	@$(CGO_ENV) go build -ldflags "$(LDFLAGS)" -tags !fyne -o $(BUILD_DIR)/$(BINARY_NAME) main.go
+	@printf "$(CC_GREEN)✔  CLI build ready: $(BUILD_DIR)/$(BINARY_NAME)$(CC_RESET)\n"
+
+build-gui:
+	@mkdir -p $(BUILD_DIR)
+	@printf "$(CC_CYAN)➜  Building with Fyne GUI support...$(CC_RESET)\n"
+	@CGO_ENABLED=1 go build -ldflags "$(LDFLAGS)" -tags fyne -o $(BUILD_DIR)/$(BINARY_NAME)-gui main.go
+	@printf "$(CC_GREEN)✔  GUI build ready: $(BUILD_DIR)/$(BINARY_NAME)-gui$(CC_RESET)\n"
+
+GUI_LINUX_DEPS := libgl1-mesa-dev xorg-dev
+GUI_DARWIN_DEPS :=
+
+check-gui-deps:
+ifeq ($(shell uname),Linux)
+	@dpkg -l $(GUI_LINUX_DEPS) > /dev/null 2>&1 || \
+		(printf "$(CC_YELLOW)⚠️  Missing GUI dependencies. Install with:$(CC_RESET)\n" && \
+		 printf "  sudo apt install $(GUI_LINUX_DEPS)\n" && exit 1)
+endif
+
+build-encrypted: check-gui-deps
+	@mkdir -p $(BUILD_DIR)
+	@printf "$(CC_CYAN)➜  Building encrypted binary with Garble...$(CC_RESET)\n"
+	@command -v garble > /dev/null 2>&1 || go install mvdan.cc/garble@latest
+	@CGO_ENABLED=1 garble -literals -tiny -seed=random build -ldflags "$(LDFLAGS)" -tags fyne -o $(BUILD_DIR)/$(BINARY_NAME)-encrypted main.go
+	@printf "$(CC_GREEN)✔  Encrypted build ready: $(BUILD_DIR)/$(BINARY_NAME)-encrypted$(CC_RESET)\n"
+
+build-release: check-gui-deps
+	@mkdir -p $(BUILD_DIR)/release
+	@printf "$(CC_CYAN)➜  Building release binaries...$(CC_RESET)\n"
+	@echo "Building Linux amd64..."
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -tags !fyne -o $(BUILD_DIR)/release/$(BINARY_NAME)-linux-amd64 main.go
+	@echo "Building macOS amd64..."
+	@CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -tags !fyne -o $(BUILD_DIR)/release/$(BINARY_NAME)-darwin-amd64 main.go
+	@echo "Building macOS arm64..."
+	@CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -tags !fyne -o $(BUILD_DIR)/release/$(BINARY_NAME)-darwin-arm64 main.go
+	@echo "Building Windows amd64..."
+	@CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -tags !fyne -o $(BUILD_DIR)/release/$(BINARY_NAME)-windows-amd64.exe main.go
+	@printf "$(CC_GREEN)✔  Release builds ready in $(BUILD_DIR)/release/$(CC_RESET)\n"
+
 help:
 	@printf "$(CC_CYAN)Available commands:$(CC_RESET)\n"
-	@printf "  $(CC_GREEN)build$(CC_RESET)           - 编译项目 (当前平台)\n"
-	@printf "  $(CC_GREEN)build-windows$(CC_RESET)   - 交叉编译 Windows amd64 版本\n"
-	@printf "  $(CC_GREEN)build-all$(CC_RESET)      - 编译当前平台 + Windows amd64\n"
-	@printf "  $(CC_GREEN)install$(CC_RESET)        - 安装到 GOPATH/bin\n"
-	@printf "  $(CC_GREEN)test$(CC_RESET)            - 运行测试\n"
-	@printf "  $(CC_GREEN)clean$(CC_RESET)           - 清理构建文件\n"
-	@printf "  $(CC_GREEN)run$(CC_RESET)             - 运行命令 (使用 ARGS=...)\n"
-	@printf "  $(CC_GREEN)register$(CC_RESET)       - 注册脚本到历史 (使用 FILE=...)\n"
+	@printf "  $(CC_GREEN)build$(CC_RESET)              - 编译项目 (当前平台, CLI only)\n"
+	@printf "  $(CC_GREEN)build-cli$(CC_RESET)          - 编译 CLI-only 版本\n"
+	@printf "  $(CC_GREEN)build-gui$(CC_RESET)          - 编译带 Fyne GUI 的版本\n"
+	@printf "  $(CC_GREEN)build-encrypted$(CC_RESET)    - 编译加密版本 (使用 Garble)\n"
+	@printf "  $(CC_GREEN)build-release$(CC_RESET)      - 编译所有平台发布版本\n"
+	@printf "  $(CC_GREEN)build-windows$(CC_RESET)      - 交叉编译 Windows amd64 版本\n"
+	@printf "  $(CC_GREEN)build-all$(CC_RESET)          - 编译当前平台 + Windows amd64\n"
+	@printf "  $(CC_GREEN)install$(CC_RESET)            - 安装到 GOPATH/bin\n"
+	@printf "  $(CC_GREEN)test$(CC_RESET)               - 运行测试\n"
+	@printf "  $(CC_GREEN)clean$(CC_RESET)              - 清理构建文件\n"
+	@printf "  $(CC_GREEN)run$(CC_RESET)                - 运行命令 (使用 ARGS=...)\n"
+	@printf "  $(CC_GREEN)register$(CC_RESET)           - 注册脚本到历史 (使用 FILE=...)\n"
+	@printf "\n"
+	@printf "$(CC_CYAN)OpenClaw 子命令示例:$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"openclaw install\"$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"openclaw doctor\"$(CC_RESET)\n"
+	@printf "  $(CC_YELLOW)make run ARGS=\"openclaw service status\"$(CC_RESET)\n"
 	@printf "\n"
 	@printf "$(CC_CYAN)Printer子命令示例:$(CC_RESET)\n"
 	@printf "  $(CC_YELLOW)make run ARGS=\"printer --setup\"$(CC_RESET)\n"
