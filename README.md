@@ -285,6 +285,119 @@ cli doctor
 
 ---
 
+### 5. `cli openclaw` - OpenClaw AI Assistant 部署
+
+一键部署和配置 OpenClaw AI Assistant，支持跨平台安装。
+
+#### 5.1 功能特性
+
+- **双模式**: GUI 和 CMD 同时支持所有操作
+- **组件选择器**: 安装时选择需要的组件，自动处理依赖关系
+- **跨平台**: 支持 Linux (systemd) / macOS (launchd) / Windows (WSL2)
+- **环境探测**: 自动检测系统、依赖、服务状态
+- **EXE 加密**: 支持 Garble 混淆 + UPX 压缩
+
+#### 5.2 安装部署
+
+```bash
+# CLI 模式安装 (默认检测显示环境)
+cli openclaw install
+
+# 强制非交互式安装
+cli openclaw install --no-gui
+
+# 指定组件安装
+cli openclaw install --components github,slack,notion
+
+# Docker 方式安装
+cli openclaw install --method docker --version beta
+
+# 源码编译安装
+cli openclaw install --method source
+```
+
+#### 5.3 卸载
+
+```bash
+# CLI 模式卸载
+cli openclaw uninstall
+
+# 完全清除 (包括数据和配置)
+cli openclaw uninstall --purge
+```
+
+#### 5.4 配置管理
+
+```bash
+# 查看当前配置
+cli openclaw config list
+
+# 设置配置项
+cli openclaw config set model anthropic/claude-opus-4-6
+cli openclaw config set gateway.port 18789
+```
+
+#### 5.5 插件管理
+
+```bash
+# 列出可用插件
+cli openclaw plugins list
+
+# 安装指定插件
+cli openclaw plugins install github slack discord
+
+# 启用/禁用插件
+cli openclaw plugins enable github
+cli openclaw plugins disable slack
+```
+
+#### 5.6 服务管理
+
+```bash
+cli openclaw start      # 启动服务
+cli openclaw stop       # 停止服务
+cli openclaw restart    # 重启服务
+cli openclaw status     # 查看状态
+cli openclaw logs       # 查看日志
+```
+
+#### 5.7 其他命令
+
+```bash
+cli openclaw version    # 版本信息
+cli openclaw update     # 更新 OpenClaw
+cli openclaw doctor     # 诊断问题
+```
+
+#### 5.8 组件依赖树
+
+安装时可选择以下组件，系统会自动处理依赖关系：
+
+| 分类 | 组件 | 说明 |
+|------|------|------|
+| Core | core, gateway | 核心组件 (必需) |
+| Channel | whatsapp, telegram, slack, discord, imessage, signal | 消息渠道 |
+| Tool | browser, voice, canvas | 工具集成 |
+| Skill | github, notion, obsidian, spotify, weather, calendar, email | 技能插件 |
+
+#### 5.9 构建选项
+
+```bash
+# 构建 CLI-only 版本
+make build-cli
+
+# 构建带 GUI 的版本
+make build-gui
+
+# 构建加密版本 (使用 Garble)
+make build-encrypted
+
+# 构建所有平台发布版本
+make build-release
+```
+
+---
+
 ## 📝 注意事项
 
 ### Printer 命令注意事项
