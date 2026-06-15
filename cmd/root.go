@@ -9,6 +9,7 @@ import (
 	cmdconfig "github.com/A-Flex-Box/cli/cmd/config"
 	cmddoctor "github.com/A-Flex-Box/cli/cmd/doctor"
 	cmdhistory "github.com/A-Flex-Box/cli/cmd/history"
+	cmdmemory "github.com/A-Flex-Box/cli/cmd/memory"
 	cmdmonitor "github.com/A-Flex-Box/cli/cmd/monitor"
 	cmdopenclaw "github.com/A-Flex-Box/cli/cmd/openclaw"
 	cmdprinter "github.com/A-Flex-Box/cli/cmd/printer"
@@ -90,6 +91,7 @@ func init() {
 	rootCmd.AddCommand(cmdconfig.NewCmd(cfg, mgr))
 	rootCmd.AddCommand(cmddoctor.NewCmd(cfg))
 	rootCmd.AddCommand(cmdhistory.NewCmd())
+	rootCmd.AddCommand(cmdmemory.NewCmd())
 	rootCmd.AddCommand(cmdmonitor.NewCmd())
 	rootCmd.AddCommand(cmdopenclaw.NewCmd())
 	rootCmd.AddCommand(cmdprinter.NewCmd())
